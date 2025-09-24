@@ -80,19 +80,22 @@ function checkWorkflow {
   done < <(yq -I 0 -o json '.jobs|to_entries[]' "${fileName}")
 }
 
-declare -a failures
+declare -a failures=()
 for path in "${@:-.}"; do
   if [[ -d "${path}" ]]; then
     [[ ! -d "${path%/}/.github/workflows" ]] || path="${path%/}/.github/workflows"
     echo "Checking directory: ${path}"
+    foundFilesCount=0
     while IFS= read -d '' -r fileName; do
+      : $((foundFilesCount++))
       checkWorkflow "${fileName}"
     done < <(find "${path}" -maxdepth 1 -type f -name '*.yaml' -print0	|| :)
+    [[ "${foundFilesCount}" -gt 0 ]] || { echo "Found no workflow files in: ${path}"; exit 1; }
   elif [[ -e "${path}" ]]; then
     checkWorkflow "${path}"
   else
     echo "Path does not exist: ${path}"
   fi
 done
-printf 'Some checks failed for: %s\n' "${failures[@]}"
+[[ "${#failures[0]}" -eq 0 ]] || printf 'Checks failed for: %s\n' "${failures[@]}"
 [[ "${#failures[0]}" -eq 0 ]]
