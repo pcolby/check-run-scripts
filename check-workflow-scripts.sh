@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2025 Paul Colby <git@colby.id.au>
+# SPDX-License-Identifier: MIT
 #
 # ShellCheck GitHub workflow scripts
 #

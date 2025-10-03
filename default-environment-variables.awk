@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Paul Colby <git@colby.id.au>
+# SPDX-License-Identifier: MIT
+
 BEGIN {
   FS="<tr><td>"
   print "readonly defaultEnvVars=("
