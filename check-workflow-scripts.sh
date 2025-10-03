@@ -10,7 +10,7 @@ set -o errexit -o noclobber -o nounset -o pipefail -r
 shopt -s inherit_errexit
 
 # curl -s https://docs.github.com/en/actions/reference/workflows-and-actions/variables |
-#   awk -f default-environment-variables.awk
+#   gawk -f default-environment-variables.gawk
 readonly defaultEnvVars=(
   CI
   GITHUB_ACTION
