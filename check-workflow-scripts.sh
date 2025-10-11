@@ -58,26 +58,89 @@ readonly defaultEnvVars=(
   RUNNER_TOOL_CACHE
 )
 
+# Detect the operating systems used by the given job. If successful, the result will be a sting containg one or more of
+# macos, ubuntu, and/or windows. If no operating system could be determined, the function returns non-zero.
+function getJobOs {
+  local -r jobId=${1}
+  local -r jobValue=${2}
+  local matrixKey matrixValues remaining runsOn
+  local -A matrixKeys=() oses=()
+  echo "Detecting OS for job: ${jobId}" >&2
+
+  # First inspect the job's `runs-on` value for any direct OS mentions.
+  runsOn=$(jq -r '.["runs-on"]' <<< "${jobValue}")
+  echo "  Inspecting runs-on: ${runsOn}" >&2
+  unset remaining
+  while [[ "${remaining-${runsOn}}" =~ (^|[^0-9a-zA-Z_-])(ubuntu|macos|windows)(.*)$ ]]; do
+    echo "    Found: ${BASH_REMATCH[2]}" >&2
+    oses["${BASH_REMATCH[2]}"]=true
+    remaining=${BASH_REMATCH[3]}
+  done
+
+  # Next check the `runs-on` value for an `matrix` key references.
+  unset remaining
+  while [[ "${remaining-${runsOn}}" =~ (^|[^0-9a-zA-Z_-])matrix\.([0-9a-zA-Z_-]+)(.*)$ ]]; do
+    echo "    Found matrix key: ${BASH_REMATCH[2]}" >&2
+    matrixKeys["${BASH_REMATCH[2]}"]=true
+    remaining=${BASH_REMATCH[3]}
+  done
+
+  # Inspect the values for all matrix keys indentified above, for OS mentions.
+  for matrixKey in "${!matrixKeys[@]}"; do
+    echo "  Inspecting values for: matrix.${matrixKey}" >&2
+    matrixValues=$(jq --arg key "${matrixKey}" --raw-output '.strategy.matrix[$key][]' <<< "${jobValue}")
+    unset remaining
+    while [[ "${remaining-${matrixValues}}" =~ (^|[^0-9a-zA-Z_-])(ubuntu|macos|windows)(.*)$ ]]; do
+      echo "    Found matrix OS: ${BASH_REMATCH[2]}" >&2
+      oses["${BASH_REMATCH[2]}"]=true
+      remaining=${BASH_REMATCH[3]}
+    done
+  done
+
+  # Also check the `matrix.include` entries for OS mentions via the keys identified above.
+  for matrixKey in "${!matrixKeys[@]}"; do
+    echo "  Inspecting includes for: matrix.${matrixKey}" >&2
+    matrixValues=$(jq --arg key "${matrixKey}" --raw-output '.strategy.matrix.include[]?[$key]//empty' <<< "${jobValue}")
+    unset remaining
+    while [[ "${remaining-${matrixValues}}" =~ (^|[^0-9a-zA-Z_-])(ubuntu|macos|windows)(.*)$ ]]; do
+      echo "    Found matrix.include OS: ${BASH_REMATCH[2]}" >&2
+      oses["${BASH_REMATCH[2]}"]=true
+      remaining=${BASH_REMATCH[3]}
+    done
+  done
+
+  # Finally, return the unique list of operating systems found (if any).
+  [[ "${#oses[@]}" -gt 0 ]] || { echo "  Failed to detect OS for job: ${jobId}" >&2; return 1; }
+  echo "  Returning OS list: ${!oses[*]}" >&2
+  echo "${!oses[@]}"
+}
+
 function checkWorkflow {
   local -r fileName=${1}
-  echo "Checking: ${fileName}"
+  echo "Checking: ${fileName}" >&2
   while IFS= read -r job; do
     jobId=$(jq -r .key <<< "${job}")
-    while IFS= read -r step; do
-      stepId=$(jq -r .key <<< "${step}")
-      script=$(jq -r .value.run <<< "${step}")
-      echo "Checking: ${jobId}[${stepId}]"
-      {
-        echo '# GitHub environment variables'
-        printf 'export %s=\n' "${defaultEnvVars[@]}"
-        echo '# Workflow environment variables'
-        yq '.env // {}|keys[]|"export "+.' "${fileName}"
-        echo '# \todo Job environment variables'
-        echo '# Step environment variables'
-        jq -r '.value.env//{}|keys[]|"export "+.' <<< "${step}"
-        echo '# Shell script (with ${{ ... }} expressions removed)'
-        sed -e 's|\${{[^}]\+}}||g' <<< "${script}"
-      } | shellcheck --shell bash /dev/stdin || failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
+    jobValue=$(jq -c .value <<< "${job}")
+    jobOses=($(getJobOs "${jobId}" "${jobValue}"))
+    for jobOs in "${jobOses[@]}"; do
+      echo "Checking as OS: ${jobOs}" >&2
+      while IFS= read -r step; do
+        stepId=$(jq -r .key <<< "${step}")
+        script=$(jq -r .value.run <<< "${step}")
+        echo "Checking: ${jobId}[${stepId}]" >&2
+        {
+          echo '# GitHub environment variables'
+          printf 'export %s=\n' "${defaultEnvVars[@]}"
+          echo '# Workflow environment variables'
+          yq '.env // {}|keys[]|"export "+.' "${fileName}"
+          echo '# Job environment variables'
+          jq '.env//{}|keys[]|"export "+.' <<< "${job}"
+          echo '# Step environment variables'
+          jq -r '.value.env//{}|keys[]|"export "+.' <<< "${step}"
+          echo '# Shell script (with ${{ ... }} expressions removed)'
+          sed -e 's|\${{[^}]\+}}||g' <<< "${script}"
+        } | shellcheck --shell bash /dev/stdin || failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
+      done
     done < <(jq -c '.value.steps//{}|to_entries[]|select(.value.run)' <<< "${job}")
   done < <(yq -I 0 -o json '.jobs|to_entries[]' "${fileName}")
 }
@@ -86,7 +149,7 @@ declare -a failures=()
 for path in "${@:-.}"; do
   if [[ -d "${path}" ]]; then
     [[ ! -d "${path%/}/.github/workflows" ]] || path="${path%/}/.github/workflows"
-    echo "Checking directory: ${path}"
+    echo "Checking directory: ${path}" >&2
     foundFilesCount=0
     while IFS= read -d '' -r fileName; do
       : $((foundFilesCount++))
@@ -96,8 +159,8 @@ for path in "${@:-.}"; do
   elif [[ -e "${path}" ]]; then
     checkWorkflow "${path}"
   else
-    echo "Path does not exist: ${path}"
+    echo "Path does not exist: ${path}" >&2
   fi
 done
-[[ "${#failures[0]}" -eq 0 ]] || printf 'Checks failed for: %s\n' "${failures[@]}"
+[[ "${#failures[0]}" -eq 0 ]] || printf 'Checks failed for: %s\n' "${failures[@]}" >&2
 [[ "${#failures[0]}" -eq 0 ]]
