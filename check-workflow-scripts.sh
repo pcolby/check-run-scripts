@@ -9,6 +9,10 @@
 set -o errexit -o noclobber -o nounset -o pipefail -r
 shopt -s inherit_errexit
 
+# \todo customise args to shellcheck; possibly allowing callers to override.
+# \todo Allow caller's to supply additional defines.
+# \todo Lots of tests!
+
 # curl -s https://docs.github.com/en/actions/reference/workflows-and-actions/variables |
 #   gawk -f default-environment-variables.gawk
 readonly -a defaultEnvVars=(
