@@ -78,7 +78,7 @@ function note  { output 3 34 "Note: $*"; } # yellow
 function warn  { output 2 35 "Warning: $*"; } # magenta
 function error { output 1 31 "Error: $*"; } # red
 
-# Given a workflow JSON (converted from YAML), output the number of `runs` steps don't specify their `shell`.
+# Given a workflow JSON (converted from YAML), output the number of `runs` steps that don't specify their `shell`.
 function countRunsWithDefaultedShell {
   debug 'Counting steps that run scripts without specifying the shell to use'
   local count
@@ -87,8 +87,8 @@ function countRunsWithDefaultedShell {
   echo "${count}"
 }
 
-# Detect the operating systems used by the given job. If successful, the result will be a sting containg one or more of
-# macos, ubuntu, and/or windows. If no operating system could be determined, the function returns non-zero.
+# Detect the operating systems used by the given job. If successful, the result will be a string containg one or more
+# of: macos, ubuntu, and/or windows. If no operating system could be determined, the function returns non-zero.
 function getJobOs {
   local -r jobId=${1}
   local -r jobValue=${2}
