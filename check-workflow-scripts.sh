@@ -146,38 +146,55 @@ function getJobOs {
   echo "${!oses[@]}"
 }
 
+function getJobShells {
+    local -r jobId="${1}"
+    local -r job="${2}"
+    local -r workflowShell="${3}"
+    debug "Looking for shell/s for job: ${jobId}"
+    local jobShell
+    jobShell=$(jq -r '.defaults.run.shell//empty' <<< "${job}")
+    debug "Job default shell: ${jobShell:-<none>}"
+
+    # If either the shell is defaulted at either the job, or the workflow level, return it.
+    [[ -z "${jobShell}" ]] || { echo "${jobShell}"; exit; }
+    [[ -z "${workflowShell}" ]] || { echo "${workflowShell}"; exit; }
+
+    # Otherwise, determine the shell/s from the job's operating system/s (could be more than one, if using a matrix).
+    local oses
+    oses=($(getJobOs "${jobId}" "${job}"))
+    for os in "${oses[@]}"; do
+      echo "XXX ${defaultRunShell[${os}]}"
+    done | sort -u
+}
+
 function checkWorkflow {
   local -r fileName=${1}
   info "Checking: ${fileName}"
   workflow=$(yq -oj "${fileName}") # Convert to JSON.
 
   # See if we need to determine the
-  unset needDefaultShells
   local count needDefaultShells workflowShell=''
   count=$(countRunsWithDefaultedShell <<< "${workflow}")
+  unset needDefaultShells
   [[ "${count}" -eq 0 ]] || {
     needDefaultShells=true
-    workflowShell=$(jq '.defaults.run.shell//empty' <<< "${workflow}")
-    debug "Workflow shell: ${workflowShell:-<none>}"
+    debug 'Looking for workflow shell'
+    workflowShell=$(jq -r '.defaults.run.shell//empty' <<< "${workflow}")
+    debug "Workflow default shell: ${workflowShell:-<none>}"
   }
   unset count
 
   # Process each job in the workflow.
   while IFS= read -r job; do
-    local workflowShell='' jobShell=''
-    local jobId jobValue jobShell jobOses
+    local jobId
     jobId=$(jq -r '._id' <<< "${job}")
-    jobShell=$(jq -c '.defaults.run.shell//empty' <<< "${job}")
-    debug "jobId: ${jobId}"
-    debug "jobShell: ${jobShell}"
-    local defaultShells=${jobShell}
-    [[ -n "${defaultShells}" ]] || defaultShells="${workflowShell}"
-    [[ -n "${defaultShells}" ]] || {
-      jobOses=($(getJobOs "${jobId}" "${job}"))
-      for jobOs in "${jobOses[@]}"; do
-        debug "XXX ${defaultRunShell[${jobOs}]}"
-      done | sort -u
+    info "Checking job: ${jobId}"
+    unset jobShells
+    [[ ! -v needDefaultShells ]] || {
+      jobShells=$(getJobShells "${jobId}" "${job}" "${workflowShell}")
+      debug "Job shell/s: ${jobShells}"
     }
+
     #for defaultShell in ${defaultShells}; do
     #continue
       #echo "Checking as OS: ${jobOs}" >&2
@@ -206,17 +223,17 @@ declare -a failures=()
 for path in "${@:-.}"; do
   if [[ -d "${path}" ]]; then
     [[ ! -d "${path%/}/.github/workflows" ]] || path="${path%/}/.github/workflows"
-    echo "Checking directory: ${path}" >&2
+    info "Checking directory: ${path}" >&2
     foundFilesCount=0
     while IFS= read -d '' -r fileName; do
       : $((foundFilesCount++))
       checkWorkflow "${fileName}"
     done < <(find "${path}" -maxdepth 1 -type f -name '*.yaml' -print0	|| :)
-    [[ "${foundFilesCount}" -gt 0 ]] || { echo "Found no workflow files in: ${path}"; exit 1; }
+    [[ "${foundFilesCount}" -gt 0 ]] || { error "Found no workflow files in: ${path}"; exit 1; }
   elif [[ -e "${path}" ]]; then
     checkWorkflow "${path}"
   else
-    echo "Path does not exist: ${path}" >&2
+    error "Path does not exist: ${path}"
   fi
 done
 [[ "${#failures[0]}" -eq 0 ]] || printf 'Checks failed for: %s\n' "${failures[@]}" >&2
