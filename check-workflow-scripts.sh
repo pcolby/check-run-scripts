@@ -73,13 +73,6 @@ function note  { output 3 34 "Note: $*"; } # yellow
 function warn  { output 2 35 "Warning: $*"; } # magenta
 function error { output 1 31 "Error: $*"; } # red
 
-# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
-readonly -A defaultRunShell=(
-  [macos]=bash
-  [ubuntu]=bash
-  [windows]=pwsh
-)
-
 # Given a workflow JSON (converted from YAML), output the number of `runs` steps don't specify their `shell`.
 function countRunsWithDefaultedShell {
   debug 'Counting steps that run scripts without specifying the shell to use'
@@ -160,10 +153,12 @@ function getJobShells {
     [[ -z "${workflowShell}" ]] || { echo "${workflowShell}"; exit; }
 
     # Otherwise, determine the shell/s from the job's operating system/s (could be more than one, if using a matrix).
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
+    local -Ar defaultOsShell=([macos]=bash [ubuntu]=bash [windows]=pwsh)
     local oses
     oses=($(getJobOs "${jobId}" "${job}"))
     for os in "${oses[@]}"; do
-      echo "XXX ${defaultRunShell[${os}]}"
+      echo "XXX ${defaultOsShell[${os}]}"
     done | sort -u
 }
 
