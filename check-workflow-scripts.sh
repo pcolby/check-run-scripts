@@ -213,7 +213,7 @@ function checkWorkflow {
           echo '# Job environment variables'
           jq -r '.env//{}|keys[]|"export "+.' <<< "${job}"
           echo '# Step environment variables'
-          jq -r '.value.env//{}|keys[]|"export "+.' <<< "${step}"
+          jq -r '.env//{}|keys[]|"export "+.' <<< "${step}"
           echo '# Shell script (with ${{ ... }} expressions removed)'
           jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
         } | shellcheck --shell "${shell}" /dev/stdin >&2 ||
