@@ -58,6 +58,21 @@ readonly -a defaultEnvVars=(
   RUNNER_TOOL_CACHE
 )
 
+function output {
+  [[ "${OUTPUT_LEVEL:-5}" -ge "$1" ]] || return 0
+  [[ ! -t 2 ]] || echo -en "\x1b[$2m" >&2
+  printf '%(%F %T)T ' >&2 # \todo make optional
+  echo -n "${@:3}" >&2
+  [[ ! -t 2 ]] || echo -e '\x1b[0m' >&2
+  # \todo Check if this is GitHub, and output to step summary too.
+}
+
+function debug { output 5 37 "$*"; } # white
+function info  { output 4 32 "$*"; } # green
+function note  { output 3 34 "Note: $*"; } # yellow
+function warn  { output 2 35 "Warning: $*"; } # magenta
+function error { output 1 31 "Error: $*"; } # red
+
 # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
 readonly -A defaultRunShell=(
   [macos]=bash
@@ -67,7 +82,10 @@ readonly -A defaultRunShell=(
 
 # Given a workflow JSON (converted from YAML), output the number of `runs` steps don't specify their `shell`.
 function countRunsWithDefaultedShell {
-  jq -r '[.jobs[].steps[]|select(has("run") and (has("shell")|not))]|length'
+  debug 'Counting steps that run scripts without specifying the shell to use'
+  local count
+  count=$(jq -r '[.jobs[].steps[]|select(has("run") and (has("shell")|not))]|length')
+  debug "Found ${count} step/s with defaulted shells"
 }
 
 # Detect the operating systems used by the given job. If successful, the result will be a sting containg one or more of
@@ -77,7 +95,7 @@ function getJobOs {
   local -r jobValue=${2}
   local matrixKey matrixValues remaining runsOn
   local -A matrixKeys=() oses=()
-  echo "Detecting OS for job: ${jobId}" >&2
+  info "Detecting OS for job: ${jobId}"
 
   # First inspect the job's `runs-on` value for any direct OS mentions.
   runsOn=$(jq -r '.["runs-on"]' <<< "${jobValue}")
@@ -129,14 +147,14 @@ function getJobOs {
 
 function checkWorkflow {
   local -r fileName=${1}
-  echo "Checking: ${fileName}" >&2
+  info "Checking: ${fileName}"
   workflow=$(yq -oj "${fileName}") # Convert to JSON.
 
+  unset needDefaultShells
+  local count
   count=$(countRunsWithDefaultedShell <<< "${workflow}")
-  echo "count: ${count}"
-  if [[ "${count}" -gt 0 ]]; then
-    echo '\todo figure out the default.'
-  fi
+  [[ "${count}" -eq 0 ]] || needDefaultShells=true
+  unset count
   return
 
   local workflowShell jobShell stepShell
