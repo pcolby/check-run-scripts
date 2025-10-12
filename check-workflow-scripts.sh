@@ -63,7 +63,8 @@ function output {
   [[ ! -t 2 ]] || echo -en "\x1b[$2m" >&2
   printf '%(%F %T)T ' >&2 # \todo make optional
   echo -n "${@:3}" >&2
-  [[ ! -t 2 ]] || echo -e '\x1b[0m' >&2
+  [[ ! -t 2 ]] || echo -en '\x1b[0m' >&2
+  echo >&2
   # \todo Check if this is GitHub, and output to step summary too.
 }
 
@@ -190,27 +191,31 @@ function checkWorkflow {
       debug "Job shell/s: ${jobShells}"
     }
 
-    #for defaultShell in ${defaultShells}; do
-    #continue
-      #echo "Checking as OS: ${jobOs}" >&2
-      #while IFS= read -r step; do
-      #  stepId=$(jq -r .key <<< "${step}")
-      #  script=$(jq -r .value.run <<< "${step}")
-      #  echo "Checking: ${jobId}[${stepId}]" >&2
-      #  {
-      #    echo '# GitHub environment variables'
-      #    printf 'export %s=\n' "${defaultEnvVars[@]}"
-      #    echo '# Workflow environment variables'
-      #    yq '.env // {}|keys[]|"export "+.' "${fileName}"
-      #    echo '# Job environment variables'
-      #    jq '.env//{}|keys[]|"export "+.' <<< "${job}"
-      #    echo '# Step environment variables'
-      #    jq -r '.value.env//{}|keys[]|"export "+.' <<< "${step}"
-      #    echo '# Shell script (with ${{ ... }} expressions removed)'
-      #    sed -e 's|\${{[^}]\+}}||g' <<< "${script}"
-      #  } | shellcheck --shell bash /dev/stdin || failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
-      #done
-    #done < <(jq -c '.value.steps//{}|to_entries[]|select(.value.run)' <<< "${job}")
+    while IFS= read -r step; do
+      local stepId stepShell script
+      stepId=$(jq -r ._id <<< "${step}")
+      info "Checking step: ${jobId}[${stepId}]"
+      debug 'Looking for step shell'
+      stepShell=$(jq -r '.shell//empty' <<< "${step}")
+      debug "Step shell: ${stepShell:-<none> - will use job"'"s default/s}"
+      for shell in ${stepShell:-${jobShells}}; do
+        [[ "${shell}" =~ ^(ba)?sh$ ]] || { note "Skipping check with shell: ${shell}"; continue; }
+        debug "Checking with shell: ${shell}"
+        #script=$(jq -r .run <<< "${step}")
+        #{
+        #  echo '# GitHub environment variables'
+        #  printf 'export %s=\n' "${defaultEnvVars[@]}"
+        #  echo '# Workflow environment variables'
+        #  yq '.env // {}|keys[]|"export "+.' "${fileName}"
+        #  echo '# Job environment variables'
+        #  jq '.env//{}|keys[]|"export "+.' <<< "${job}"
+        #  echo '# Step environment variables'
+        #  jq -r '.value.env//{}|keys[]|"export "+.' <<< "${step}"
+        #  echo '# Shell script (with ${{ ... }} expressions removed)'
+        #  sed -e 's|\${{[^}]\+}}||g' <<< "${script}"
+        #} #| shellcheck --shell bash /dev/stdin || failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
+      done
+    done < <(jq -c '.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${job}")
   done < <(jq -c '.jobs|to_entries[]|{_id:.key}+.value' <<< "${workflow}")
 }
 
