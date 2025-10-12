@@ -3,7 +3,7 @@
 
 BEGIN {
   FS="<tr><td>"
-  print "readonly defaultEnvVars=("
+  print "readonly -a defaultEnvVars=("
 }
 
 /^<table aria-labelledby="default-environment-variables">/ {

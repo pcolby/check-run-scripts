@@ -11,7 +11,7 @@ shopt -s inherit_errexit
 
 # curl -s https://docs.github.com/en/actions/reference/workflows-and-actions/variables |
 #   gawk -f default-environment-variables.gawk
-readonly defaultEnvVars=(
+readonly -a defaultEnvVars=(
   CI
   GITHUB_ACTION
   GITHUB_ACTION_PATH
@@ -58,6 +58,18 @@ readonly defaultEnvVars=(
   RUNNER_TOOL_CACHE
 )
 
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
+readonly -A defaultRunShell=(
+  [macos]=bash
+  [ubuntu]=bash
+  [windows]=pwsh
+)
+
+# Given a workflow JSON (converted from YAML), output the number of `runs` steps don't specify their `shell`.
+function countRunsWithDefaultedShell {
+  jq -r '[.jobs[].steps[]|select(has("run") and (has("shell")|not))]|length'
+}
+
 # Detect the operating systems used by the given job. If successful, the result will be a sting containg one or more of
 # macos, ubuntu, and/or windows. If no operating system could be determined, the function returns non-zero.
 function getJobOs {
@@ -71,7 +83,7 @@ function getJobOs {
   runsOn=$(jq -r '.["runs-on"]' <<< "${jobValue}")
   echo "  Inspecting runs-on: ${runsOn}" >&2
   unset remaining
-  while [[ "${remaining-${runsOn}}" =~ (^|[^0-9a-zA-Z_-])(ubuntu|macos|windows)(.*)$ ]]; do
+  while [[ "${remaining-${runsOn}}" =~ (^|[^0-9a-zA-Z_-])(macos|ubuntu|windows)(.*)$ ]]; do
     echo "    Found: ${BASH_REMATCH[2]}" >&2
     oses["${BASH_REMATCH[2]}"]=true
     remaining=${BASH_REMATCH[3]}
@@ -90,7 +102,7 @@ function getJobOs {
     echo "  Inspecting values for: matrix.${matrixKey}" >&2
     matrixValues=$(jq --arg key "${matrixKey}" --raw-output '.strategy.matrix[$key][]' <<< "${jobValue}")
     unset remaining
-    while [[ "${remaining-${matrixValues}}" =~ (^|[^0-9a-zA-Z_-])(ubuntu|macos|windows)(.*)$ ]]; do
+    while [[ "${remaining-${matrixValues}}" =~ (^|[^0-9a-zA-Z_-])(macos|ubuntu|windows)(.*)$ ]]; do
       echo "    Found matrix OS: ${BASH_REMATCH[2]}" >&2
       oses["${BASH_REMATCH[2]}"]=true
       remaining=${BASH_REMATCH[3]}
@@ -118,30 +130,51 @@ function getJobOs {
 function checkWorkflow {
   local -r fileName=${1}
   echo "Checking: ${fileName}" >&2
+  workflow=$(yq -oj "${fileName}") # Convert to JSON.
+
+  count=$(countRunsWithDefaultedShell <<< "${workflow}")
+  echo "count: ${count}"
+  if [[ "${count}" -gt 0 ]]; then
+    echo '\todo figure out the default.'
+  fi
+  return
+
+  local workflowShell jobShell stepShell
+  workflowShell=$(yq '.defaults.run.shell // ""' "${fileName}")
   while IFS= read -r job; do
+    local jobId jobValue jobShell jobOses
     jobId=$(jq -r .key <<< "${job}")
     jobValue=$(jq -c .value <<< "${job}")
-    jobOses=($(getJobOs "${jobId}" "${jobValue}"))
-    for jobOs in "${jobOses[@]}"; do
-      echo "Checking as OS: ${jobOs}" >&2
-      while IFS= read -r step; do
-        stepId=$(jq -r .key <<< "${step}")
-        script=$(jq -r .value.run <<< "${step}")
-        echo "Checking: ${jobId}[${stepId}]" >&2
-        {
-          echo '# GitHub environment variables'
-          printf 'export %s=\n' "${defaultEnvVars[@]}"
-          echo '# Workflow environment variables'
-          yq '.env // {}|keys[]|"export "+.' "${fileName}"
-          echo '# Job environment variables'
-          jq '.env//{}|keys[]|"export "+.' <<< "${job}"
-          echo '# Step environment variables'
-          jq -r '.value.env//{}|keys[]|"export "+.' <<< "${step}"
-          echo '# Shell script (with ${{ ... }} expressions removed)'
-          sed -e 's|\${{[^}]\+}}||g' <<< "${script}"
-        } | shellcheck --shell bash /dev/stdin || failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
-      done
-    done < <(jq -c '.value.steps//{}|to_entries[]|select(.value.run)' <<< "${job}")
+    jobShell=$(jq -c '.defaults.run.shell//empty' <<< "${jobValue}")
+    local defaultShells=${jobShell}
+    [[ -n "${defaultShells}" ]] || defaultShells="${workflowShell}"
+    [[ -n "${defaultShells}" ]] || {
+      jobOses=($(getJobOs "${jobId}" "${jobValue}"))
+      for jobOs in "${jobOses[@]}"; do
+        echo "XXX ${defaultRunShell[${jobOs}]}"
+      done | sort -u
+    }
+    #for defaultShell in ${defaultShells}; do
+    #continue
+      #echo "Checking as OS: ${jobOs}" >&2
+      #while IFS= read -r step; do
+      #  stepId=$(jq -r .key <<< "${step}")
+      #  script=$(jq -r .value.run <<< "${step}")
+      #  echo "Checking: ${jobId}[${stepId}]" >&2
+      #  {
+      #    echo '# GitHub environment variables'
+      #    printf 'export %s=\n' "${defaultEnvVars[@]}"
+      #    echo '# Workflow environment variables'
+      #    yq '.env // {}|keys[]|"export "+.' "${fileName}"
+      #    echo '# Job environment variables'
+      #    jq '.env//{}|keys[]|"export "+.' <<< "${job}"
+      #    echo '# Step environment variables'
+      #    jq -r '.value.env//{}|keys[]|"export "+.' <<< "${step}"
+      #    echo '# Shell script (with ${{ ... }} expressions removed)'
+      #    sed -e 's|\${{[^}]\+}}||g' <<< "${script}"
+      #  } | shellcheck --shell bash /dev/stdin || failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
+      #done
+    #done < <(jq -c '.value.steps//{}|to_entries[]|select(.value.run)' <<< "${job}")
   done < <(yq -I 0 -o json '.jobs|to_entries[]' "${fileName}")
 }
 
