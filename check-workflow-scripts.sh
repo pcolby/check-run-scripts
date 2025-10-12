@@ -86,6 +86,7 @@ function countRunsWithDefaultedShell {
   local count
   count=$(jq -r '[.jobs[].steps[]|select(has("run") and (has("shell")|not))]|length')
   debug "Found ${count} step/s with defaulted shells"
+  echo "${count}"
 }
 
 # Detect the operating systems used by the given job. If successful, the result will be a sting containg one or more of
@@ -150,26 +151,31 @@ function checkWorkflow {
   info "Checking: ${fileName}"
   workflow=$(yq -oj "${fileName}") # Convert to JSON.
 
+  # See if we need to determine the
   unset needDefaultShells
-  local count
+  local count needDefaultShells workflowShell=''
   count=$(countRunsWithDefaultedShell <<< "${workflow}")
-  [[ "${count}" -eq 0 ]] || needDefaultShells=true
+  [[ "${count}" -eq 0 ]] || {
+    needDefaultShells=true
+    workflowShell=$(jq '.defaults.run.shell//empty' <<< "${workflow}")
+    debug "Workflow shell: ${workflowShell:-<none>}"
+  }
   unset count
-  return
 
-  local workflowShell jobShell stepShell
-  workflowShell=$(yq '.defaults.run.shell // ""' "${fileName}")
+  # Process each job in the workflow.
   while IFS= read -r job; do
+    local workflowShell='' jobShell=''
     local jobId jobValue jobShell jobOses
-    jobId=$(jq -r .key <<< "${job}")
-    jobValue=$(jq -c .value <<< "${job}")
-    jobShell=$(jq -c '.defaults.run.shell//empty' <<< "${jobValue}")
+    jobId=$(jq -r '._id' <<< "${job}")
+    jobShell=$(jq -c '.defaults.run.shell//empty' <<< "${job}")
+    debug "jobId: ${jobId}"
+    debug "jobShell: ${jobShell}"
     local defaultShells=${jobShell}
     [[ -n "${defaultShells}" ]] || defaultShells="${workflowShell}"
     [[ -n "${defaultShells}" ]] || {
-      jobOses=($(getJobOs "${jobId}" "${jobValue}"))
+      jobOses=($(getJobOs "${jobId}" "${job}"))
       for jobOs in "${jobOses[@]}"; do
-        echo "XXX ${defaultRunShell[${jobOs}]}"
+        debug "XXX ${defaultRunShell[${jobOs}]}"
       done | sort -u
     }
     #for defaultShell in ${defaultShells}; do
@@ -193,7 +199,7 @@ function checkWorkflow {
       #  } | shellcheck --shell bash /dev/stdin || failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
       #done
     #done < <(jq -c '.value.steps//{}|to_entries[]|select(.value.run)' <<< "${job}")
-  done < <(yq -I 0 -o json '.jobs|to_entries[]' "${fileName}")
+  done < <(jq -c '.jobs|to_entries[]|{_id:.key}+.value' <<< "${workflow}")
 }
 
 declare -a failures=()
