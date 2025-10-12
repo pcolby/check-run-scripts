@@ -89,14 +89,14 @@ function getJobOs {
   local -r jobValue=${2}
   local matrixKey matrixValues remaining runsOn
   local -A matrixKeys=() oses=()
-  info "Detecting OS for job: ${jobId}"
+  debug "Detecting OS for job: ${jobId}"
 
   # First inspect the job's `runs-on` value for any direct OS mentions.
   runsOn=$(jq -r '.["runs-on"]' <<< "${jobValue}")
-  echo "  Inspecting runs-on: ${runsOn}" >&2
+  debug "  Inspecting runs-on: ${runsOn}"
   unset remaining
   while [[ "${remaining-${runsOn}}" =~ (^|[^0-9a-zA-Z_-])(macos|ubuntu|windows)(.*)$ ]]; do
-    echo "    Found: ${BASH_REMATCH[2]}" >&2
+    debug "    Found: ${BASH_REMATCH[2]}"
     oses["${BASH_REMATCH[2]}"]=true
     remaining=${BASH_REMATCH[3]}
   done
@@ -104,18 +104,18 @@ function getJobOs {
   # Next check the `runs-on` value for an `matrix` key references.
   unset remaining
   while [[ "${remaining-${runsOn}}" =~ (^|[^0-9a-zA-Z_-])matrix\.([0-9a-zA-Z_-]+)(.*)$ ]]; do
-    echo "    Found matrix key: ${BASH_REMATCH[2]}" >&2
+    debug "    Found matrix key: ${BASH_REMATCH[2]}"
     matrixKeys["${BASH_REMATCH[2]}"]=true
     remaining=${BASH_REMATCH[3]}
   done
 
   # Inspect the values for all matrix keys indentified above, for OS mentions.
   for matrixKey in "${!matrixKeys[@]}"; do
-    echo "  Inspecting values for: matrix.${matrixKey}" >&2
+    debug "  Inspecting values for: matrix.${matrixKey}"
     matrixValues=$(jq --arg key "${matrixKey}" --raw-output '.strategy.matrix[$key][]' <<< "${jobValue}")
     unset remaining
     while [[ "${remaining-${matrixValues}}" =~ (^|[^0-9a-zA-Z_-])(macos|ubuntu|windows)(.*)$ ]]; do
-      echo "    Found matrix OS: ${BASH_REMATCH[2]}" >&2
+      debug "    Found matrix OS: ${BASH_REMATCH[2]}"
       oses["${BASH_REMATCH[2]}"]=true
       remaining=${BASH_REMATCH[3]}
     done
@@ -123,19 +123,19 @@ function getJobOs {
 
   # Also check the `matrix.include` entries for OS mentions via the keys identified above.
   for matrixKey in "${!matrixKeys[@]}"; do
-    echo "  Inspecting includes for: matrix.${matrixKey}" >&2
+    debug "  Inspecting includes for: matrix.${matrixKey}"
     matrixValues=$(jq --arg key "${matrixKey}" --raw-output '.strategy.matrix.include[]?[$key]//empty' <<< "${jobValue}")
     unset remaining
     while [[ "${remaining-${matrixValues}}" =~ (^|[^0-9a-zA-Z_-])(ubuntu|macos|windows)(.*)$ ]]; do
-      echo "    Found matrix.include OS: ${BASH_REMATCH[2]}" >&2
+      debug "    Found matrix.include OS: ${BASH_REMATCH[2]}"
       oses["${BASH_REMATCH[2]}"]=true
       remaining=${BASH_REMATCH[3]}
     done
   done
 
   # Finally, return the unique list of operating systems found (if any).
-  [[ "${#oses[@]}" -gt 0 ]] || { echo "  Failed to detect OS for job: ${jobId}" >&2; return 1; }
-  echo "  Returning OS list: ${!oses[*]}" >&2
+  [[ "${#oses[@]}" -gt 0 ]] || { error "  Failed to detect OS for job: ${jobId}"; return 1; }
+  debug "  Returning OS list: ${!oses[*]}"
   echo "${!oses[@]}"
 }
 
@@ -158,7 +158,7 @@ function getJobShells {
     local oses
     oses=($(getJobOs "${jobId}" "${job}"))
     for os in "${oses[@]}"; do
-      echo "XXX ${defaultOsShell[${os}]}"
+      echo "${defaultOsShell[${os}]}"
     done | sort -u
 }
 
@@ -218,7 +218,7 @@ declare -a failures=()
 for path in "${@:-.}"; do
   if [[ -d "${path}" ]]; then
     [[ ! -d "${path%/}/.github/workflows" ]] || path="${path%/}/.github/workflows"
-    info "Checking directory: ${path}" >&2
+    info "Checking directory: ${path}"
     foundFilesCount=0
     while IFS= read -d '' -r fileName; do
       : $((foundFilesCount++))
