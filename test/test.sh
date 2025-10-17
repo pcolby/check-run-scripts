@@ -14,20 +14,44 @@ readonly selfPath testDir projectDir
 UNIT_TESTING_ONLY=true . "${projectDir}/check-workflow-scripts.sh"
 
 function runTest {
+  local -r test="${1}"
+  local -r fileName="${2}"
+  local -r testIndex="${3}"
+  debug "Running test: ${test}"
+  local name func input args expected actual
+  IFS=$'\x1F' read -d '' -r name func input expected < <(jq -r \
+    '[ .name, .function, (.input|tojson), .expected ]|join("\u001F")+"\u0000"' <<< "${test}")
+  info "Running test: ${fileName##*/}[${testIndex}] ${name@Q}"
+  mapfile -t args < <(jq '.input[]?' <<< "${test}")
+  debug "Invoking ${func} with ${#args[@]} arguments and ${#input} chars of input"
+  actual=$("${func}" "${input[@]}" <<< "${input}" || :)
+  [[ "${actual}" == "${expected}" ]] || {
+    error "Test failed: ${fileName##*/}[${testIndex}] ${name@Q}"
+    error "  Expected: ${expected@Q}"
+    error "  Actual:   ${actual@Q}"
+    failures+=( "${fileName}[${testIndex}] ${name@Q}" )
+  }
+}
+
+function runTests {
   local -r fileName="${1}"
   debug "Running test: ${fileName}"
-  warn 'runTest not implemented'
+  while IFS= read -r test; do
+    testIndex=$(jq -r .index <<< "${test}")
+    debug "Running test: ${fileName}[${testIndex}]"
+    runTest "${test}" "${fileName}" "${testIndex}"
+  done < <(yq -I0 -oj "${fileName}" | jq -cs 'to_entries[]|{index:.key}+.value' || :)
 }
 
 declare -a failures=()
 
 for testFile in "${@}"; do
-  runTest "${testFile}"
+  runTests "${testFile}"
 done
 
 [[ "${#}" -ge 1 ]] || while IFS= read -d '' -r fileName; do
-  runTest "${fileName}"
+  runTests "${fileName}"
 done < <(find "${testDir}" -name '*.yaml' -type f -print0 || :)
 
-[[ "${#failures[0]}" -eq 0 ]] || printf 'The following tests failed: %s\n' "${failures[@]}" >&2
+[[ "${#failures[0]}" -eq 0 ]] || printf 'Test failed: %s\n' "${failures[@]}" >&2
 [[ "${#failures[0]}" -eq 0 ]]

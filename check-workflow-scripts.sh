@@ -185,8 +185,8 @@ function getJobShells {
     debug "Job default shell: ${jobShell:-<none>}"
 
     # If either the shell is defaulted at either the job, or the workflow level, return it.
-    [[ -z "${jobShell}" ]] || { echo "${jobShell}"; exit; }
-    [[ -z "${workflowShell}" ]] || { echo "${workflowShell}"; exit; }
+    [[ -z "${jobShell}" ]] || { echo "${jobShell}"; return; }
+    [[ -z "${workflowShell}" ]] || { echo "${workflowShell}"; return; }
 
     # Otherwise, determine the shell/s from the job's operating system/s (could be more than one, if using a matrix).
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell

@@ -1,0 +1,69 @@
+---
+#[.jobs[].steps[]|select(has("run") and (has("shell")|not))]|length
+name: No run steps
+function: countRunsWithDefaultedShell
+input:
+  jobs:
+    job1:
+      steps: [ ]
+    job2:
+      steps: [ ]
+expected: 0
+---
+name: One step without shell
+function: countRunsWithDefaultedShell
+input:
+  jobs:
+    job1:
+      steps:
+        - run: A
+          shell: bash
+        - run: B
+          shell: bash
+        - run: C
+          shell: bash
+    job2:
+      steps:
+        - run: D
+          shell: bash
+        - run: E w/ no shell
+        - run: F
+          shell: bash
+expected: 1
+---
+name: All steps without shell
+function: countRunsWithDefaultedShell
+input:
+  jobs:
+    job1:
+      steps:
+        - run: A
+        - run: B
+        - run: C
+    job2:
+      steps:
+        - run: A
+        - run: B
+        - run: C
+expected: 6
+---
+name: Ignore non-run steps
+function: countRunsWithDefaultedShell
+input:
+  jobs:
+    job1:
+      steps:
+        - run: A
+          shell: bash
+        - run: B
+          shell: bash
+        - use: C
+    job2:
+      steps:
+        - run: D
+          shell: bash
+        - run: E
+          shell: bash
+        - use: F
+expected: 0
+...
