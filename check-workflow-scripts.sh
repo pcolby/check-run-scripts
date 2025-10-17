@@ -244,7 +244,7 @@ function checkWorkflow {
           echo '# Step environment variables'
           jq -r '.env//{}|keys[]|"export "+.' <<< "${step}"
           echo '# Extra variables'
-          printf 'export %s=\n' "${extraVars[@]}"
+          [[ "${#extraVars[@]}" -eq 0 ]] || printf 'export %s=\n' "${extraVars[@]}"
           # shellcheck disable=SC2016 # The GitHub Actions expression is not meant to me expanded.
           echo '# Shell script (with ${{ ... }} expressions removed)'
           jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
