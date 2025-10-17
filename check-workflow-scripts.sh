@@ -4,12 +4,15 @@
 #
 # ShellCheck GitHub workflow scripts
 #
-# Usage: check-workflow-scripts [<path> [...]]
+# Usage: [SHELLCHECK_OPTS=...] check-workflow-scripts.sh [-d|--define ...] [-h|--help] [-v|--verbose] [<path> [...]]
 
 set -o errexit -o noclobber -o nounset -o pipefail -r
 shopt -s inherit_errexit
 
-export SHELLCHECK_OPTS="${SHELLCHECK_OPTS:---check-sourced --enable=all --external-sources --norc}"
+readonly SCRIPT_VERSION=0.0.1
+
+readonly DEFAULT_SHELLCHECK_OPTS='--check-sourced --enable=all --external-sources --norc'
+export SHELLCHECK_OPTS="${SHELLCHECK_OPTS:-${DEFAULT_SHELLCHECK_OPTS}}"
 
 # \todo customise args to shellcheck; possibly allowing callers to override.
 # \todo Allow caller's to supply additional defines.
@@ -79,6 +82,35 @@ function info  { output 4 32 "$*"; } # green
 function note  { output 3 34 "Note: $*"; } # yellow
 function warn  { output 2 35 "Warning: $*"; } # magenta
 function error { output 1 31 "Error: $*"; } # red
+
+readonly USAGE_TEXT="
+Usage: [SHELLCHECK_OPTS=...] ${BASH_SOURCE[0]} <options> [<path> [...]]
+
+Options:
+  -d,--debug        Enable debug output.
+  -h,--help         Show this help text and exit.
+  -s,--set <names>  Set <names> in each extracted script, so ShellCheck treats
+                    them as assigned.
+  -v,--version      Show the script's version, and exit.
+  -                 Treat the remaining arguments as positional.
+
+See ShellCheck manual for SHELLCHECK_OPTS. If not already set, this script
+defaults it to: ${DEFAULT_SHELLCHECK_OPTS}
+"
+
+declare -a extraVars=()
+unset endOfOptions
+while [[ "${1:-}" == -* && ! -v endOfOptions ]]; do
+  case "${1}" in
+    -d|--debug)   OUTPUT_LEVEL=5 ;;
+    -h|--help)    echo "${USAGE_TEXT}"; exit ;;
+    -s|--set)     mapfile -td, -O "${#extraVars[@]}" extraVars < <(echo -n "${2:?The ${1} option requres an argument.}"); shift ;;
+    -v|--version) echo "Version ${SCRIPT_VERSION}"; exit ;;
+    -)            endOfOptions=true ;;
+    *)            error "Unknown option: ${1}" ; exit 1 ;;
+  esac
+  shift
+done
 
 # Given a workflow JSON (converted from YAML), output the number of `runs` steps that don't specify their `shell`.
 function countRunsWithDefaultedShell {
