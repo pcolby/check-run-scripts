@@ -66,7 +66,7 @@ readonly -a defaultEnvVars=(
 )
 
 function output {
-  [[ "${OUTPUT_LEVEL:-5}" -ge "$1" ]] || return 0
+  [[ "${OUTPUT_LEVEL:-4}" -ge "$1" ]] || return 0
   [[ ! -t 2 ]] || echo -en "\x1b[$2m" >&2
   printf '%(%F %T)T %s' -1 "${@:3}" >&2
   [[ ! -t 2 ]] || echo -en '\x1b[0m' >&2
