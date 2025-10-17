@@ -255,6 +255,7 @@ function checkWorkflow {
   done < <(jq -c '.jobs|to_entries[]|{_id:.key}+.value' <<< "${workflow}" || :)
 }
 
+[[ ! -v UNIT_TESTING_ONLY ]] || return 0
 declare -a failures=()
 for path in "${@:-.}"; do
   if [[ -d "${path}" ]]; then
