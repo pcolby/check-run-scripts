@@ -14,8 +14,6 @@ readonly SCRIPT_VERSION=0.0.1
 readonly DEFAULT_SHELLCHECK_OPTS='--check-sourced --enable=all --external-sources --norc'
 export SHELLCHECK_OPTS="${SHELLCHECK_OPTS:-${DEFAULT_SHELLCHECK_OPTS}}"
 
-# \todo customise args to shellcheck; possibly allowing callers to override.
-# \todo Allow caller's to supply additional defines.
 # \todo Lots of tests!
 
 # curl -s https://docs.github.com/en/actions/reference/workflows-and-actions/variables |
@@ -70,8 +68,7 @@ readonly -a defaultEnvVars=(
 function output {
   [[ "${OUTPUT_LEVEL:-5}" -ge "$1" ]] || return 0
   [[ ! -t 2 ]] || echo -en "\x1b[$2m" >&2
-  printf '%(%F %T)T ' >&2 # \todo make optional
-  echo -n "${@:3}" >&2
+  printf '%(%F %T)T %s' -1 "${@:3}" >&2
   [[ ! -t 2 ]] || echo -en '\x1b[0m' >&2
   echo >&2
   # \todo Check if this is GitHub, and output to step summary too.
