@@ -113,7 +113,7 @@ done
 function countRunsWithDefaultedShell {
   debug 'Counting steps that run scripts without specifying the shell to use'
   local count
-  count=$(jq -r '[.jobs[].steps[]|select(has("run") and (has("shell")|not))]|length')
+  count=$(jq -r '[.jobs[].steps[]?|select(has("run") and (has("shell")|not))]|length')
   debug "Found ${count} step/s with defaulted shells"
   echo "${count}"
 }

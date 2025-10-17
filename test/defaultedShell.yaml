@@ -1,5 +1,14 @@
 ---
-#[.jobs[].steps[]|select(has("run") and (has("shell")|not))]|length
+name: No steps # eg if all workflows are calling reusable workflows.
+function: countRunsWithDefaultedShell
+input:
+  jobs:
+    job1:
+      uses: foo
+    job2:
+      uses: bar
+expected: 0
+---
 name: No run steps
 function: countRunsWithDefaultedShell
 input:
