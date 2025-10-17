@@ -22,9 +22,10 @@ function runTest {
   IFS=$'\x1F' read -d '' -r name func input expected < <(jq -r \
     '[ .name, .function, (.input|tojson), .expected ]|join("\u001F")+"\u0000"' <<< "${test}")
   info "Running test: ${fileName##*/}[${testIndex}] ${name@Q}"
-  mapfile -t args < <(jq '.input[]?' <<< "${test}")
+  [[ "${input}" != 'null' ]] || input=
+  mapfile -t args < <(jq -cr '.args[]?' <<< "${test}")
   debug "Invoking ${func} with ${#args[@]} arguments and ${#input} chars of input"
-  actual=$("${func}" "${input[@]}" <<< "${input}" || :)
+  actual=$("${func}" "${args[@]}" <<< "${input}" || :)
   [[ "${actual}" == "${expected}" ]] || {
     error "Test failed: ${fileName##*/}[${testIndex}] ${name@Q}"
     error "  Expected: ${expected@Q}"
