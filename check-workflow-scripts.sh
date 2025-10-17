@@ -194,9 +194,7 @@ function getJobShells {
     # Otherwise, determine the shell/s from the job's operating system/s (could be more than one, if using a matrix).
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
     local -Ar defaultOsShell=([macos]=bash [ubuntu]=bash [windows]=pwsh)
-    local oses
-    oses=($(getJobOs "${jobId}" "${job}"))
-    for os in "${oses[@]}"; do
+    for os in $(getJobOs "${jobId}" "${job}"); do
       echo "${defaultOsShell[${os}]}"
     done | sort -u
 }
@@ -230,7 +228,7 @@ function checkWorkflow {
     }
 
     while IFS= read -r step; do
-      local stepId stepShell script
+      local stepId stepShell
       stepId=$(jq -r ._id <<< "${step}")
       info "Checking step: ${jobId}[${stepId}]"
       debug 'Looking for step shell'
@@ -248,13 +246,14 @@ function checkWorkflow {
           jq -r '.env//{}|keys[]|"export "+.' <<< "${job}"
           echo '# Step environment variables'
           jq -r '.env//{}|keys[]|"export "+.' <<< "${step}"
+          # shellcheck disable=SC2016 # The GitHub Actions expression is not meant to me expanded.
           echo '# Shell script (with ${{ ... }} expressions removed)'
           jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
         } | shellcheck --shell "${shell}" /dev/stdin >&2 ||
           failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
       done
-    done < <(jq -c '.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${job}")
-  done < <(jq -c '.jobs|to_entries[]|{_id:.key}+.value' <<< "${workflow}")
+    done < <(jq -c '.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${job}" || :)
+  done < <(jq -c '.jobs|to_entries[]|{_id:.key}+.value' <<< "${workflow}" || :)
 }
 
 declare -a failures=()
