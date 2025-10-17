@@ -9,6 +9,8 @@
 set -o errexit -o noclobber -o nounset -o pipefail -r
 shopt -s inherit_errexit
 
+export SHELLCHECK_OPTS="${SHELLCHECK_OPTS:---check-sourced --enable=all --external-sources --norc}"
+
 # \todo customise args to shellcheck; possibly allowing callers to override.
 # \todo Allow caller's to supply additional defines.
 # \todo Lots of tests!
