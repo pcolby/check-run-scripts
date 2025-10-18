@@ -22,7 +22,7 @@ jobs:
         if: false # \todo
         run: check-run-scripts.sh action.yaml
       - name: Check workflows
-        run: check-run-scripts.sh
+        run: ./check-run-scripts.sh
     strategy:
       matrix:
         os:
