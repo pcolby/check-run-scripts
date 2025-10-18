@@ -1,19 +1,12 @@
-# This file is actually test data for the check-workflow-scripts.sh script. That is, it defines variables in a few
-# different ways, so we can run check-workflow-scripts.sh on this file to test that those variables are picked up
-# successfully. Just for convenience, this workflow also runs those tests.
 name: Test
 
 on:
+  pull_request:
   push:
-  pull:
   workflow_dispatch:
 
 permissions:
-  contents: read
-
-env:
-  WORFKLOW_ENV_VAR_1: workflow env value 1
-  WORFKLOW_ENV_VAR_2: workflow env value 2
+  contents: { }
 
 defaults:
   run:
@@ -22,31 +15,15 @@ defaults:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    env:
-      JOB_ENV_VAR_1: job env value 1
-      JOB_ENV_VAR_2: job env value 2
-    defaults:
-      run:
-        shell: bash
     steps:
-      - name: Test workflow vars
-        run: printf '%s\n%s\n' "${WORFKLOW_ENV_VAR_1}" "${WORFKLOW_ENV_VAR_2}"
-        shell: bash
-      - name: Test job vars
-        run: printf '%s\n%s\n' "${JOB_ENV_VAR_1}" "${JOB_ENV_VAR_2}"
-        shell: bash
-      - name: Test step vars
-        run: printf '%s\n%s\n' "${STEP_ENV_VAR_1}" "${STEP_ENV_VAR_2}"
-        shell: bash
-        env:
-          STEP_ENV_VAR_1: step env value 1
-          STEP_ENV_VAR_2: step env value 2
-      - name: Test GitHub built-ins
-        run: printf '%s\n%s\n%s\n' "${CI}" "${GITHUB_REF}" "${RUNNER_OS}"
-      - name: Checkout repo
-        uses: actions/checkout@v5
-      - name: Test workflows
-        run: check-workflow-scripts.sh .github/workflows
+      - uses: actions/checkout@v5
+      - name: Run tests
+        run: test/test.sh
+      - name: Check action
+        if: false # \todo
+        run: check-run-scripts.sh action.yaml
+      - name: Check workflows
+        run: check-run-scripts.sh
     strategy:
       matrix:
         # macos-14
