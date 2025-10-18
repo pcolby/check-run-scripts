@@ -5,7 +5,7 @@
 set -o errexit -o noclobber -o nounset -o pipefail
 shopt -s inherit_errexit
 
-selfPath=$(realpath -e "${BASH_SOURCE[0]}")
+selfPath=$(realpath "${BASH_SOURCE[0]}")
 testDir=$(dirname "${selfPath}")
 projectDir=$(dirname "${testDir}")
 readonly selfPath testDir projectDir
