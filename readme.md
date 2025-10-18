@@ -1,3 +1,4 @@
+
 # Check 'Run' Scripts
 
 GitHub Action, and standalone script, for running ShellCheck against scripts embedded in GitHub Actions [workflow] and
@@ -68,3 +69,7 @@ defaults it to: --check-sourced --enable=all --external-sources --norc
 
     \todo All shellcheck options?
 ```
+
+[composite action]: https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#composite-actions
+[ShellCheck]: https://github.com/koalaman/shellcheck
+[workflow]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
