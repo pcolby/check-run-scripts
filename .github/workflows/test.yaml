@@ -16,12 +16,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - name: Upgrade Bash
+      - name: Install dependencies (macOS)
         if: runner.os == 'macOs'
-        run: brew install bash
-      - name: Install yq
+        run: brew install bash shellcheck
+      - name: Install dependencies (win)
         if: runner.os == 'Windows'
-        run: choco install yq
+        run: choco install shellcheck yq
       - name: Run tests
         run: test/test.sh
       - name: Check action
