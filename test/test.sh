@@ -10,7 +10,7 @@ testDir=$(dirname "${selfPath}")
 projectDir=$(dirname "${testDir}")
 readonly selfPath testDir projectDir
 
-# shellcheck source=../check-workflow-scripts.sh
+# shellcheck source=../check-run-scripts.sh
 UNIT_TESTING_ONLY=true . "${projectDir}/check-run-scripts.sh"
 
 function runTest {
