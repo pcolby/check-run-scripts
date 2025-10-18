@@ -23,7 +23,7 @@ function runTest {
     '[ .name, .function, (.input|tojson), .expected ]|join("\u001F")+"\u0000"' <<< "${test}" || :)
   info "Running test: ${fileName##*/}[${testIndex}] ${name@Q}"
   [[ "${input}" != 'null' ]] || input=
-  mapfile -t args < <(jq -cr '.args[]?' <<< "${test}" || :)
+  mapfile -t args < <(jq -cr '.args[]?' <<< "${test}" | tr -d '\r' || :)
   debug "Invoking ${func} with ${#args[@]} arguments and ${#input} chars of input"
   actual=$("${func}" "${args[@]}" <<< "${input}" || :)
   [[ "${actual}" == "${expected}" ]] || {

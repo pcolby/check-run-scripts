@@ -246,7 +246,7 @@ function checkWorkflow {
           # shellcheck disable=SC2016 # The GitHub Actions expression is not meant to me expanded.
           echo '# Shell script (with ${{ ... }} expressions removed)'
           jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
-        } | shellcheck --shell "${shell}" /dev/stdin >&2 ||
+        } | shellcheck --shell "${shell}" - >&2 ||
           failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
       done
     done < <(jq -c '.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${job}" || :)
