@@ -1,0 +1,46 @@
+---
+name: macOS
+function: getJobOs
+args:
+  - jobId
+  - runs-on: macos
+expected: macos
+---
+name: Ubuntu
+function: getJobOs
+args:
+  - jobId
+  - runs-on: ubuntu-ignored-suffix
+expected: ubuntu
+---
+name: Windows
+function: getJobOs
+args:
+  - jobId
+  - runs-on: windows-${{ ignore-me }}
+expected: windows
+---
+name: Matrix, sorted
+function: getJobOs
+args:
+  - jobId
+  - runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - windows-1
+          - ubuntu-2
+          - macos-3
+expected: macos ubuntu windows
+---
+name: Literal and matrix
+function: getJobOs
+args:
+  - jobId
+  - runs-on: ${{ inputs.foo && 'ubuntu' || matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - windows-1
+expected: ubuntu windows
+...

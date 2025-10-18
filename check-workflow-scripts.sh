@@ -172,7 +172,7 @@ function getJobOs {
   # Finally, return the unique list of operating systems found (if any).
   [[ "${#oses[@]}" -gt 0 ]] || { error "  Failed to detect OS for job: ${jobId}"; return 1; }
   debug "  Returning OS list: ${!oses[*]}"
-  echo "${!oses[@]}"
+  jq -rR 'split(" ")|sort|join(" ")' <<< "${!oses[@]}"
 }
 
 function getJobShells {
