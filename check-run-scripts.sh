@@ -14,10 +14,8 @@ readonly SCRIPT_VERSION=0.0.1
 readonly DEFAULT_SHELLCHECK_OPTS='--check-sourced --enable=all --external-sources --norc'
 export SHELLCHECK_OPTS="${SHELLCHECK_OPTS:-${DEFAULT_SHELLCHECK_OPTS}}"
 
-# \todo Lots of tests!
-
-# curl -s https://docs.github.com/en/actions/reference/workflows-and-actions/variables |
-#   gawk -f default-environment-variables.gawk
+# GitHub's default environment variables. See ./misc/default-environment-variables.gawk and
+# https://docs.github.com/en/actions/reference/workflows-and-actions/variables#default-environment-variables
 readonly -a defaultEnvVars=(
   CI
   GITHUB_ACTION
