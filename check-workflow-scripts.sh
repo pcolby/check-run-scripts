@@ -193,7 +193,7 @@ function getJobShells {
     local -Ar defaultOsShell=([macos]=bash [ubuntu]=bash [windows]=pwsh)
     for os in $(getJobOs "${jobId}" "${job}"); do
       echo "${defaultOsShell[${os}]}"
-    done | sort -u
+    done | jq -rRs 'split("\n")|unique|join(" ")|ltrimstr(" ")'
 }
 
 function checkWorkflow {

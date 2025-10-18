@@ -1,0 +1,58 @@
+---
+name: Job shell takes precedence
+function: getJobShells
+args:
+  - jobId
+  - runs-on: someOs
+    defaults:
+      run:
+        shell: jobShell
+  - workflowShell
+expected: jobShell
+---
+name: Fallback to workflow shell (if any)
+function: getJobShells
+args:
+  - jobId
+  - runs-on: someOs
+  - workflowShell
+expected: workflowShell
+---
+name: Fallback to default macOS shell
+function: getJobShells
+args:
+  - jobId
+  - runs-on: macos
+  - ""
+expected: bash
+---
+name: Fallback to default Ubuntu shell
+function: getJobShells
+args:
+  - jobId
+  - runs-on: ubuntu
+  - ""
+expected: bash
+---
+name: Fallback to default Windows shell
+function: getJobShells
+args:
+  - jobId
+  - runs-on: windows
+  - ""
+expected: pwsh
+---
+name: Fallback to default matrix shells
+function: getJobShells
+args:
+  - jobId
+  - runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - windows-1
+          - ubuntu-2
+          - macos-3
+  - ""
+expected: bash pwsh
+...
