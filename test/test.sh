@@ -11,7 +11,7 @@ projectDir=$(dirname "${testDir}")
 readonly selfPath testDir projectDir
 
 # shellcheck source=../check-workflow-scripts.sh
-UNIT_TESTING_ONLY=true . "${projectDir}/check-workflow-scripts.sh"
+UNIT_TESTING_ONLY=true . "${projectDir}/check-run-scripts.sh"
 
 function runTest {
   local -r test="${1}"
