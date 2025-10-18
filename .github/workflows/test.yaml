@@ -5,8 +5,7 @@ on:
   push:
   workflow_dispatch:
 
-permissions:
-  contents: { }
+permissions: { }
 
 defaults:
   run:
