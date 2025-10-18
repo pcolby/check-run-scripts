@@ -25,10 +25,14 @@ jobs:
         run: check-run-scripts.sh
     strategy:
       matrix:
-        # macos-14
-        # macos-15
-        # macos-26
-        # ubuntu-22.04
-        - ubuntu-24.04
-        # windows-2022
-        # windows-2025
+        os:
+          # macos-14
+          # macos-15
+          # macos-26
+          # ubuntu-22.04
+          # ubuntu-22.04-arm
+          - ubuntu-24.04
+          # ubuntu-24.04-arm
+          # windows-11
+          # windows-2022
+          # windows-2025
