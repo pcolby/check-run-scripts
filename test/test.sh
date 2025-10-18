@@ -20,10 +20,10 @@ function runTest {
   debug "Running test: ${test}"
   local name func input args expected actual
   IFS=$'\x1F' read -d '' -r name func input expected < <(jq -r \
-    '[ .name, .function, (.input|tojson), .expected ]|join("\u001F")+"\u0000"' <<< "${test}")
+    '[ .name, .function, (.input|tojson), .expected ]|join("\u001F")+"\u0000"' <<< "${test}" || :)
   info "Running test: ${fileName##*/}[${testIndex}] ${name@Q}"
   [[ "${input}" != 'null' ]] || input=
-  mapfile -t args < <(jq -cr '.args[]?' <<< "${test}")
+  mapfile -t args < <(jq -cr '.args[]?' <<< "${test}" || :)
   debug "Invoking ${func} with ${#args[@]} arguments and ${#input} chars of input"
   actual=$("${func}" "${args[@]}" <<< "${input}" || :)
   [[ "${actual}" == "${expected}" ]] || {
