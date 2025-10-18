@@ -93,7 +93,7 @@ $
 > already, one of more of those need to be installed on [macOS](#macos) and [Windows](#windows) runners. See below.
 
 ```yaml
-- use: pcolby/check-run-scripts@v0.1
+- uses: pcolby/check-run-scripts@v0.1
   with:
     # One or more paths to check \todo new-line separated?
     # Default is the current directoy.
@@ -112,7 +112,7 @@ For GitHub's macOS runners, `bash` must be upgraded (macOS's Bash is ancient), a
 
 ```yaml
 - run: brew install bash shellcheck
-- use: pcolby/check-run-scripts@v0.1
+- uses: pcolby/check-run-scripts@v0.1
 ```
 
 ### Windows
@@ -121,7 +121,7 @@ For GitHub's Windows runners, both `jq` and `yq` must be installed.
 
 ```yaml
 - run: choco install shellcheck yq
-- use: pcolby/check-run-scripts@v0.1
+- uses: pcolby/check-run-scripts@v0.1
 ```
 
 [Bash]: https://www.gnu.org/software/bash/

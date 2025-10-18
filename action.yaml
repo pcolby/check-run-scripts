@@ -1,0 +1,25 @@
+name: Check `run` Scripts
+
+author: Paul Colby
+
+descripton: Check your embedded GitHub Actions shell scripts
+
+inputs:
+  paths:
+    description:
+    default:
+  foo:
+    required: false
+
+# outputs:
+
+runs:
+  using: composite
+  steps:
+    # \todo inputs.*
+    - run: '"${GITHUB_ACTION_PATH}/check-run-scripts.sh"'
+      shell: bash
+
+branding:
+  icon: code
+  color: green

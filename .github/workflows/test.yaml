@@ -12,7 +12,7 @@ defaults:
     shell: bash
 
 jobs:
-  test:
+  test-local:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -25,11 +25,10 @@ jobs:
       - name: Run tests
         run: test/test.sh --debug
       - name: Check action
-        if: false # \todo
-        run: check-run-scripts.sh action.yaml
+        run: ./check-run-scripts.sh --debug action.yaml
       - name: Check workflows
         run: ./check-run-scripts.sh --debug
-    strategy:
+    strategy: &strategy
       matrix:
         os:
           - macos-14
@@ -43,3 +42,23 @@ jobs:
           - windows-2022
           - windows-2025
       fail-fast: false
+
+  test-action:
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOs'
+        run: brew install bash shellcheck
+      - name: Install dependencies (win)
+        if: runner.os == 'Windows'
+        run: choco install shellcheck yq
+      - name: Check default path
+        uses: pcolby/check-run-scripts@action
+      - name: Check specific paths
+        uses: pcolby/check-run-scripts@action
+        with:
+          paths: |
+            ./github/actions
+            action.yaml
+    strategy: *strategy

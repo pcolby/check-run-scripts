@@ -111,7 +111,7 @@ done
 function countRunsWithDefaultedShell {
   debug 'Counting steps that run scripts without specifying the shell to use'
   local count
-  count=$(jq -r '[.jobs[].steps[]?|select(has("run") and (has("shell")|not))]|length')
+  count=$(jq -r '[.jobs[]?.steps?[]?|select(has("run") and (has("shell")|not))]|length')
   debug "Found ${count} step/s with defaulted shells"
   echo "${count}"
 }
@@ -194,12 +194,44 @@ function getJobShells {
     done | jq -rRs 'split("\n")|unique|join(" ")|ltrimstr(" ")'
 }
 
+function getStepScript {
+  local -r step="${1}"
+  echo '# Step environment variables'
+  jq -r '.env//{}|keys[]|"export "+.' <<< "${step}"
+  echo '# Extra variables'
+  [[ "${#extraVars[@]}" -eq 0 ]] || printf 'export %s=\n' "${extraVars[@]}"
+  # shellcheck disable=SC2016 # The GitHub Actions expression is not meant to me expanded.
+  echo '# Shell script (with ${{ ... }} expressions removed)'
+  jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
+}
+
+function checkAction {
+  info "Checking action: ${fileName}"
+  action=$(yq -oj "${fileName}") # Convert to JSON.
+  while IFS= read -r step; do
+    local stepId stepShell
+    stepId=$(jq -r '.id//._id' <<< "${step}")
+    info "Checking step: runs.steps[${stepId}]"
+    debug 'Looking for step shell'
+    stepShell=$(jq -r '.shell//empty' <<< "${step}")
+    [[ -n "${stepShell}" ]] || { error "Missing shell on step: ${stepId}"; exit 3; }
+    [[ "${stepShell}" =~ ^(ba)?sh$ ]] || { note "Skipping check with shell: ${stepShell}"; continue; }
+    debug "Checking with shell: ${stepShell}"
+    {
+      echo '# GitHub environment variables'
+      printf 'export %s=\n' "${defaultEnvVars[@]}"
+      # shellcheck disable=SC2310 # Don't mind that errexit is inactive.
+      getStepScript "${step}"
+    } | shellcheck --shell "${stepShell}" - >&2 ||
+      failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
+  done < <(jq -c '.runs.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${action}" || :)
+}
+
 function checkWorkflow {
-  local -r fileName=${1}
-  info "Checking: ${fileName}"
+  info "Checking workflow: ${fileName}"
   workflow=$(yq -oj "${fileName}") # Convert to JSON.
 
-  # See if we need to determine the
+  # See if we need to determine the default shell for the OS.
   local count needDefaultShells workflowShell=''
   count=$(countRunsWithDefaultedShell <<< "${workflow}")
   unset needDefaultShells
@@ -214,7 +246,7 @@ function checkWorkflow {
   # Process each job in the workflow.
   while IFS= read -r job; do
     local jobId
-    jobId=$(jq -r '._id' <<< "${job}")
+    jobId=$(jq -r '.id//._id' <<< "${job}")
     info "Checking job: ${jobId}"
     unset jobShells
     [[ ! -v needDefaultShells ]] || {
@@ -239,18 +271,26 @@ function checkWorkflow {
           jq -r '.env//{}|keys[]|"export "+.' <<< "${workflow}"
           echo '# Job environment variables'
           jq -r '.env//{}|keys[]|"export "+.' <<< "${job}"
-          echo '# Step environment variables'
-          jq -r '.env//{}|keys[]|"export "+.' <<< "${step}"
-          echo '# Extra variables'
-          [[ "${#extraVars[@]}" -eq 0 ]] || printf 'export %s=\n' "${extraVars[@]}"
-          # shellcheck disable=SC2016 # The GitHub Actions expression is not meant to me expanded.
-          echo '# Shell script (with ${{ ... }} expressions removed)'
-          jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
+          # shellcheck disable=SC2310 # Don't mind that errexit is inactive.
+          getStepScript "${step}"
         } | shellcheck --shell "${shell}" - >&2 ||
           failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
       done
     done < <(jq -c '.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${job}" || :)
   done < <(jq -c '.jobs|to_entries[]|{_id:.key}+.value' <<< "${workflow}" || :)
+}
+
+function checkFile {
+  local -r fileName="${1}"
+  info "Checking file: ${fileName}"
+  if [[ "$(yq '.jobs|length' "${fileName}" || :)" != '0' ]]; then
+    checkWorkflow "${fileName}"
+  elif [[ "$(yq '.runs.using' "${fileName}" || :)" == 'composite' ]]; then
+    checkAction "${fileName}"
+  else
+    error "File is not a valid workflow, nor a valid composite action: ${fileName}"
+    exit 2
+  fi
 }
 
 [[ ! -v UNIT_TESTING_ONLY ]] || return 0
@@ -262,11 +302,11 @@ for path in "${@:-.}"; do
     foundFilesCount=0
     while IFS= read -d '' -r fileName; do
       : $((foundFilesCount++))
-      checkWorkflow "${fileName}"
+      checkFile "${fileName}"
     done < <(find "${path}" -maxdepth 1 -type f -name '*.yaml' -print0	|| :)
     [[ "${foundFilesCount}" -gt 0 ]] || { error "Found no workflow files in: ${path}"; exit 1; }
   elif [[ -e "${path}" ]]; then
-    checkWorkflow "${path}"
+    checkFile "${path}"
   else
     error "Path does not exist: ${path}"
   fi
