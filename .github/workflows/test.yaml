@@ -23,7 +23,7 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install shellcheck yq
       - name: Run tests
-        run: test/test.sh
+        run: test/test.sh --debug
       - name: Check action
         if: false # \todo
         run: check-run-scripts.sh action.yaml
