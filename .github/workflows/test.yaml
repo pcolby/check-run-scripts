@@ -19,6 +19,9 @@ jobs:
       - name: Upgrade Bash
         if: runner.os == 'macOs'
         run: brew install bash
+      - name: Install yq
+        if: runner.os == 'Windows'
+        run: choco install yq
       - name: Run tests
         run: test/test.sh
       - name: Check action
