@@ -17,11 +17,13 @@ Actions as some sort of CI process is easy: just add a step that runs [ShellChec
 However, if you have scripts embedded into GitHub Actions files, checking them is not so easy. This project can help
 with that.
 
-## How
+## Running Locally
 
-check-run-scripts can be run two ways: on a local machine, or as usable GitHub Action.
+### Dependencies
 
-### Running Locally
+The script depends on [Bash], [jq] and [yq], so install those first, if you don't have them already.
+
+### Installation
 
 To install, simply download the `check-run-scripts.sh` script to somehwere you like, and make it executable.
 
@@ -29,6 +31,8 @@ To install, simply download the `check-run-scripts.sh` script to somehwere you l
 curl ... \todo
 chmod u+x check-run-scripts.sh
 ```
+
+### Usage
 
 Once installed, run either:
 
@@ -53,12 +57,16 @@ See ShellCheck manual for SHELLCHECK_OPTS. If not already set, this script
 defaults it to: --check-sourced --enable=all --external-sources --norc
 ```
 
-### Using GitHub Action
+## Using GitHub Action
 
 > [!WARNING]
 > The GitHub Action is currently in development, and will be available soon. The information here is likely to change.
 
-#### Inputs
+### Inputs
+
+> [!NOTE]
+> The action requires `shellcheck`, `jq` and `yq` commands. While GitHub includes these commands on Ubuntu runners
+> already, one of more of those need to be installed on [macOS](#macos) and [Windows](#windows) runners. See below.
 
 ```yaml
 - use: pcolby/check-run-scripts@v0.1
@@ -73,3 +81,25 @@ defaults it to: --check-sourced --enable=all --external-sources --norc
 [composite action]: https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#composite-actions
 [ShellCheck]: https://github.com/koalaman/shellcheck
 [workflow]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+
+### macOS
+
+For GitHub's macOS runners, `bash` must be upgraded (macOS's Bash is ancient), and `shellcheck` installed.
+
+```yaml
+- run: brew install bash shellcheck
+- use: pcolby/check-run-scripts@v0.1
+```
+
+### Windows
+
+For GitHub's Windows runners, both `jq` and `yq` must be installed.
+
+```yaml
+- run: choco install shellcheck yq
+- use: pcolby/check-run-scripts@v0.1
+```
+
+[Bash]: https://www.gnu.org/software/bash/
+[jq]: https://jqlang.org/
+[yq]: https://mikefarah.gitbook.io/yq
