@@ -2,7 +2,7 @@ name: Check `run` Scripts
 
 author: Paul Colby
 
-descripton: Check your embedded GitHub Actions shell scripts
+description: Check your embedded GitHub Actions shell scripts
 
 inputs:
   paths:
@@ -74,7 +74,7 @@ runs:
         [[ -z "${INPUT_RC_FILE}" ]] || args+=("--sc--rcfile=${INPUT_RC_FILE}")
         [[ -z "${INPUT_SOURCE_PATH}" ]] || {
           mapfile -t paths <<< "${INPUT_SOURCE_PATH%$'\n'}"
-          args+=("--sc--source-path=$(IFS="${SOURCE_PATH_SEPERATOR}"; echo "${paths[*]}")")
+          args+=("--sc--source-path=$(IFS="${SOURCE_PATH_SEPARATOR}"; echo "${paths[*]}")")
         }
         [[ -z "${INPUT_SEVERITY}" ]] || args+=("--sc--severity=${INPUT_SEVERITY}")
         [[ "${INPUT_DEBUG}" != 'true' ]] || args+=('--debug')
@@ -94,7 +94,7 @@ runs:
         INPUT_SEVERITY: ${{ inputs.severity }}
         INPUT_SHELL: ${{ inputs.shell }}
         INPUT_DEBUG: ${{ inputs.debug }}
-        SOURCE_PATH_SEPERATOR: ${{ runner.os == 'Windows' && ';' || ':' }}
+        SOURCE_PATH_SEPARATOR: ${{ runner.os == 'Windows' && ';' || ':' }}
 
 branding:
   icon: code

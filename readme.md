@@ -5,12 +5,12 @@ https://github.com/pcolby/check-run-scripts/actions/workflows/test.yaml)
 [![Lint](https://github.com/pcolby/check-run-scripts/actions/workflows/lint.yaml/badge.svg)](
 https://github.com/pcolby/check-run-scripts/actions/workflows/lint.yaml)
 
-GitHub Action, and standalone script, for running ShellCheck against scripts embedded in GitHub Actions [workflow] and
+GitHub Action, and stand-alone script, for running ShellCheck against scripts embedded in GitHub Actions [workflow] and
 [composite action] files.
 
 ## Why
 
-Testing standalone scripts is easy. You can simply run [ShellCheck] on them directly. Likewise, testing them in GitHub
+Testing stand-alone scripts is easy. You can simply run [ShellCheck] on them directly. Likewise, testing them in GitHub
 Actions as some sort of CI process is easy: just add a step that runs [ShellCheck].
 
 However, if you have scripts _embedded_ into GitHub Actions files, checking them is not so easy. This project can help
@@ -29,10 +29,10 @@ The script depends on [Bash], [jq] and [yq], so install those first, if you don'
 
 ### Installation
 
-To install, simply download the `check-run-scripts.sh` script to somehwere you like, and make it executable.
+To install, simply download the `check-run-scripts.sh` script to somewhere you like, and make it executable.
 
 ```sh
-curl -O 'https://raw.githubusercontent.com/pcolby/check-run-scripts/main/check-run-scripts.sh'
+curl -O 'https://raw.githubusercontent.com/pcolby/check-run-scripts/v0.1/check-run-scripts.sh'
 chmod u+x check-run-scripts.sh
 ./check-run-scripts.sh --version
 ```
@@ -60,8 +60,8 @@ Options:
   -                 Treat the remaining arguments as positional.
 
 Additionally, any options that start with --sc- will be passed to ShellCheck
-with the --sc prefix removed. For exampple, '--sc--norc'. See the ShellCheck
-manual for the range of options available. If no ShellCheck optons are set,
+with the --sc prefix removed. For example, '--sc--norc'. See the ShellCheck
+manual for the range of options available. If no ShellCheck options are set,
 the following options are used by default:
   --check-sourced --enable=all --external-sources --norc
 ```
@@ -93,7 +93,8 @@ $
 
 > [!NOTE]
 > The action requires `shellcheck`, `jq` and `yq` commands. While GitHub includes these commands on Ubuntu runners
-> already, one of more of those need to be installed on [macOS](#macos) and [Windows](#windows) runners. See below.
+> already, one or more of those need to be installed on macOS and Windows. See the [macOS](#macos) and
+> [Windows](#windows) sections below for details.
 
 ### Action Usage
 
@@ -142,7 +143,7 @@ $
 
     # Minimum severity of errors to report. Must be one of the levels supported by `shellcheck`; currently: `error`,
     # `warning`, `info` and `style`.
-    # Optiona. Defaults to allowing `shellcheck` to use it's own default, which is currently `style`.
+    # Optional. Defaults to allowing `shellcheck` to use it's own default, which is currently `style`.
     severity: info
 
     # Set to `true` to enable debug output.

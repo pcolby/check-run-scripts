@@ -88,8 +88,8 @@ Options:
   -                 Treat the remaining arguments as positional.
 
 Additionally, any options that start with --sc- will be passed to ShellCheck
-with the --sc prefix removed. For exampple, '--sc--norc'. See the ShellCheck
-manual for the range of options available. If no ShellCheck optons are set,
+with the --sc prefix removed. For example, '--sc--norc'. See the ShellCheck
+manual for the range of options available. If no ShellCheck options are set,
 the following options are used by default:
   ${DEFAULT_SHELLCHECK_ARGS[*]}
 "
