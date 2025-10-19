@@ -1,5 +1,9 @@
-
 # Check 'Run' Scripts
+
+[![Test](https://github.com/pcolby/check-run-scripts/actions/workflows/test.yaml/badge.svg)](
+https://github.com/pcolby/check-run-scripts/actions/workflows/test.yaml)
+[![Lint](https://github.com/pcolby/check-run-scripts/actions/workflows/lint.yaml/badge.svg)](
+https://github.com/pcolby/check-run-scripts/actions/workflows/lint.yaml)
 
 GitHub Action, and standalone script, for running ShellCheck against scripts embedded in GitHub Actions [workflow] and
 [composite action] files.
