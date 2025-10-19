@@ -32,7 +32,7 @@ The script depends on [Bash], [jq] and [yq], so install those first, if you don'
 To install, simply download the `check-run-scripts.sh` script to somehwere you like, and make it executable.
 
 ```sh
-curl ... \todo
+curl -O 'https://raw.githubusercontent.com/pcolby/check-run-scripts/main/check-run-scripts.sh'
 chmod u+x check-run-scripts.sh
 ./check-run-scripts.sh --version
 ```
