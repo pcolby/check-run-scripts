@@ -44,7 +44,7 @@ Once installed, run either:
 You can use the `--help` option for more details.
 
 ```text
-Usage: [SHELLCHECK_OPTS=...] ./check-run-scripts.sh <options> [<path> [...]]
+Usage: ./check-run-scripts.sh [<options>] [<path> [...]]
 
 Options:
   -d,--debug        Enable debug output.
@@ -54,8 +54,11 @@ Options:
   -v,--version      Show the script's version, and exit.
   -                 Treat the remaining arguments as positional.
 
-See ShellCheck manual for SHELLCHECK_OPTS. If not already set, this script
-defaults it to: --check-sourced --enable=all --external-sources --norc
+Additionally, any options that start with --sc- will be passed to ShellCheck
+with the --sc prefix removed. For exampple, '--sc--norc'. See the ShellCheck
+manual for the range of options available. If no ShellCheck optons are set,
+the following options are used by default:
+  --check-sourced --enable=all --external-sources --norc
 ```
 
 ### Examples
@@ -83,23 +86,63 @@ $
 
 ## GitHub Action
 
-> [!WARNING]
-> The GitHub Action is currently in development, and will be available soon. The information here is likely to change.
-
-### Action Usage
-
 > [!NOTE]
 > The action requires `shellcheck`, `jq` and `yq` commands. While GitHub includes these commands on Ubuntu runners
 > already, one of more of those need to be installed on [macOS](#macos) and [Windows](#windows) runners. See below.
 
+### Action Usage
+
 ```yaml
 - uses: pcolby/check-run-scripts@v0.1
   with:
-    # One or more paths to check \todo new-line separated?
-    # Default is the current directoy.
-    paths:
+    # Files or directories containing workflow/action files to check. If not specified, files under the
+    # `./.github/workflows` folder will be checked, otherwise files in the current working directory itself.
+    # Paths must be new-line separated. Hint: use YAML's `|-` block scalar syntax.
+    paths: |-
+      ${{ github.workspace }}/.github/workflows
+      action.yaml
 
-    \todo All shellcheck options?
+    # Emit warnings in sourced files. Normally, `shellcheck` will only warn about issues in the specified files. With
+    # this input set to `true`, any issues in sourced files will also be reported. Defaults to `true`.
+    check-sourced: true
+
+    # Comma-separated list of codes to include, for example `SC2016,SC2310`.
+    # Optional. Defaults to `all`.
+    include: all
+
+    # Comma-separated list of codes to exclude, for example, `SC2016,SC2310`.
+    # Optional. Defaults is '' (none).
+    exclude: SC2016,SC2310
+
+    # Follow source statements even when the file is not specified as input. By default, `shellcheck` will only follow
+    # files specified on the command line (plus `/dev/null`). This option allows following any file the script may
+    # source.
+    # Optional. Default is `true`.
+    external-sources: true
+
+    # Configuration file to prefer over searching for one in the default locations.
+    # Optional. Default is '' (none).
+    rc-file: some/preferred/shellcheck.rc
+
+    # Additional paths to search for sourced files. Paths must be new-line separated. Hint: use YAML's `|-` block scalar
+    # syntax.
+    # Optional. Default is '' (none).
+    source-path: |-
+      some/extra/path
+      another/path
+
+    # Override shell dialect. Valid values are `sh`, `bash`, `dash`, `ksh`, and `busybox`.
+    # Optional. Defaults to auto-detecting from the action/workflow file/s.
+    shell: bash
+
+    # Minimum severity of errors to report. Must be one of the levels supported by `shellcheck`; currently: `error`,
+    # `warning`, `info` and `style`.
+    # Optiona. Defaults to allowing `shellcheck` to use it's own default, which is currently `style`.
+    severity: info
+
+    # Set to `true` to enable debug output.
+    # Optional. Default is '' (non-true).
+    debug: true
 ```
 
 [composite action]: https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#composite-actions

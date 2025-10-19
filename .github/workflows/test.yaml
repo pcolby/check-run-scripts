@@ -53,12 +53,36 @@ jobs:
       - name: Install dependencies (win)
         if: runner.os == 'Windows'
         run: choco install shellcheck yq
-      - name: Check default path
+      - name: Check defaults
         uses: pcolby/check-run-scripts@action
       - name: Check specific paths
         uses: pcolby/check-run-scripts@action
         with:
-          paths: |
-            ./github/actions
+          paths: |-
+            .github/workflows
             action.yaml
+      - name: Check trailing newline # ie if someone forgets the `-` in `|-`.
+        uses: pcolby/check-run-scripts@action
+        with:
+          paths: | # No chomp indicator.
+            .github/workflows
+            action.yaml
+      - name: Check overriding most options # Not actually testing their effects.
+        uses: pcolby/check-run-scripts@action
+        with:
+          paths: |-
+            .github/workflows
+            action.yaml
+          check-sourced: false
+          include: SC1000,SC1001
+          exclude: SC2016,SC2310
+          external-sources: false
+          # rc-file:
+          source-path: |-
+            .github
+            .github/workflows
+            test
+          shell: bash
+          severity: info
+          debug: true
     strategy: *strategy

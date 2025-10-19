@@ -6,9 +6,57 @@ descripton: Check your embedded GitHub Actions shell scripts
 
 inputs:
   paths:
-    description:
-    default:
-  foo:
+    description: >-
+      Files or directories containing workflow/action files to check. If not specified, files under the
+      `./.github/workflows` folder will be checked, otherwise files in the current working directory itself.
+      Paths must be new-line separated. Hint: use YAML's `|-` block scalar syntax.
+    required: false
+
+  check-sourced:
+    description: >-
+      Emit warnings in sourced files. Normally, `shellcheck` will only warn about issues in the specified files. With
+      this input set to `true`, any issues in sourced files will also be reported.
+    default: true
+
+  include:
+    description: Comma-separated list of codes to include, for example `SC2016,SC2310`. Defaults to `all`.
+    default: all
+
+  exclude:
+    description: Comma-separated list of codes to exclude, for example, `SC2016,SC2310`. Defaults to none.
+    required: false
+
+  external-sources:
+    description: >-
+      Follow source statements even when the file is not specified as input. By default, `shellcheck` will only follow
+      files specified on the command line (plus `/dev/null`). This option allows following any file the script may
+      source.
+    default: true
+
+  rc-file:
+    description: Configuration file to prefer over searching for one in the default locations.
+    required: false
+
+  source-path:
+    description: >-
+      Additional paths to search for sourced files. Paths must be new-line separated. Hint: use YAML's `|-` block scalar
+      syntax.
+    required: false
+
+  shell:
+    description: >-
+      Override shell dialect. Valid values are `sh`, `bash`, `dash`, `ksh`, and `busybox`. Defaults to auto-detecting
+      from the action/workflow file/s.
+    required: false
+
+  severity:
+    description: >-
+      Minimum severity of errors to report. Must be one of the levels supported by `shellcheck`; currently: `error`,
+      `warning`, `info` and `style`. Default is to allow `shellcheck`'s own default, which is currently `style`.
+    required: false
+
+  debug:
+    description: Set to `true` to enable debug output.
     required: false
 
 # outputs:
@@ -16,9 +64,37 @@ inputs:
 runs:
   using: composite
   steps:
-    # \todo inputs.*
-    - run: '"${GITHUB_ACTION_PATH}/check-run-scripts.sh"'
+    - name: Check `run` scripts
+      run: |
+        declare -a args=()
+        [[ "${INPUT_CHECK_SOURCED}" != 'true' ]] || args+=('--sc--check-sourced')
+        [[ -z "${INPUT_INCLUDE}" ]] || args+=("--sc--enable=${INPUT_INCLUDE}")
+        [[ -z "${INPUT_EXCLUDE}" ]] || args+=("--sc--exclude=${INPUT_EXCLUDE}")
+        [[ "${INPUT_EXTERNAL_SOURCES}" != 'true' ]] || args+=('--sc--check-sourced')
+        [[ -z "${INPUT_RC_FILE}" ]] || args+=("--sc--rcfile=${INPUT_RC_FILE}")
+        [[ -z "${INPUT_SOURCE_PATH}" ]] || {
+          mapfile -t paths <<< "${INPUT_SOURCE_PATH%$'\n'}"
+          args+=("--sc--source-path=$(IFS="${SOURCE_PATH_SEPERATOR}"; echo "${paths[*]}")")
+        }
+        [[ -z "${INPUT_SEVERITY}" ]] || args+=("--sc--severity=${INPUT_SEVERITY}")
+        [[ "${INPUT_DEBUG}" != 'true' ]] || args+=('--debug')
+        [[ -z "${INPUT_SHELL}" ]] || args+=("--sc--shell=${INPUT_SHELL}")
+        mapfile -O "${#args[@]}" -t args <<< "${INPUT_PATHS%$'\n'}"
+        [[ "${INPUT_DEBUG}" != 'true' ]] || printf 'Arg: %s\n' "${args[@]}"
+        "${GITHUB_ACTION_PATH}/check-run-scripts.sh" "${args[@]}"
       shell: bash
+      env:
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_CHECK_SOURCED: ${{ inputs.check-sourced }}
+        INPUT_INCLUDE: ${{ inputs.include }}
+        INPUT_EXCLUDE: ${{ inputs.exclude }}
+        INPUT_EXTERNAL_SOURCES: ${{ inputs.external-sources }}
+        INPUT_RC_FILE: ${{ inputs.rc-file }}
+        INPUT_SOURCE_PATH: ${{ inputs.source-path }}
+        INPUT_SEVERITY: ${{ inputs.severity }}
+        INPUT_SHELL: ${{ inputs.shell }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+        SOURCE_PATH_SEPERATOR: ${{ runner.os == 'Windows' && ';' || ':' }}
 
 branding:
   icon: code

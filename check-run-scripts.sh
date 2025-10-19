@@ -2,17 +2,14 @@
 # SPDX-FileCopyrightText: 2025 Paul Colby <git@colby.id.au>
 # SPDX-License-Identifier: MIT
 #
-# ShellCheck GitHub workflow scripts
-#
-# Usage: [SHELLCHECK_OPTS=...] check-workflow-scripts.sh [-d|--define ...] [-h|--help] [-v|--verbose] [<path> [...]]
+# ShellCheck GitHub workflow scripts. For usage, run: ./check-workflow-scripts.sh --help
 
 set -o errexit -o noclobber -o nounset -o pipefail -r
 shopt -s inherit_errexit
 
 readonly SCRIPT_VERSION=0.0.1
 
-readonly DEFAULT_SHELLCHECK_OPTS='--check-sourced --enable=all --external-sources --norc'
-export SHELLCHECK_OPTS="${SHELLCHECK_OPTS:-${DEFAULT_SHELLCHECK_OPTS}}"
+readonly -a DEFAULT_SHELLCHECK_ARGS=('--check-sourced' '--enable=all' '--external-sources' '--norc')
 
 # GitHub's default environment variables. See ./misc/default-environment-variables.gawk and
 # https://docs.github.com/en/actions/reference/workflows-and-actions/variables#default-environment-variables
@@ -66,7 +63,8 @@ readonly -a defaultEnvVars=(
 function output {
   [[ "${OUTPUT_LEVEL:-4}" -ge "$1" ]] || return 0
   [[ ! -t 2 ]] || echo -en "\x1b[$2m" >&2
-  printf '%(%F %T)T %s' -1 "${@:3}" >&2
+  printf '%(%F %T)T ' >&2
+  printf '%s' "${@:3}" >&2
   [[ ! -t 2 ]] || echo -en '\x1b[0m' >&2
   echo >&2
   # \todo Check if this is GitHub, and output to step summary too.
@@ -79,7 +77,7 @@ function warn  { output 2 35 "Warning: $*"; } # magenta
 function error { output 1 31 "Error: $*"; } # red
 
 readonly USAGE_TEXT="
-Usage: [SHELLCHECK_OPTS=...] ${BASH_SOURCE[0]} <options> [<path> [...]]
+Usage: ${BASH_SOURCE[0]} [<options>] [<path> [...]]
 
 Options:
   -d,--debug        Enable debug output.
@@ -89,11 +87,15 @@ Options:
   -v,--version      Show the script's version, and exit.
   -                 Treat the remaining arguments as positional.
 
-See ShellCheck manual for SHELLCHECK_OPTS. If not already set, this script
-defaults it to: ${DEFAULT_SHELLCHECK_OPTS}
+Additionally, any options that start with --sc- will be passed to ShellCheck
+with the --sc prefix removed. For exampple, '--sc--norc'. See the ShellCheck
+manual for the range of options available. If no ShellCheck optons are set,
+the following options are used by default:
+  ${DEFAULT_SHELLCHECK_ARGS[*]}
 "
 
 declare -a extraVars=()
+declare -a shellcheckArgs=()
 unset endOfOptions
 while [[ "${1:-}" == -* && ! -v endOfOptions ]]; do
   case "${1}" in
@@ -101,11 +103,16 @@ while [[ "${1:-}" == -* && ! -v endOfOptions ]]; do
     -h|--help)    echo "${USAGE_TEXT}"; exit ;;
     -s|--set)     mapfile -td, -O "${#extraVars[@]}" extraVars < <(echo -n "${2:?The ${1} option requres an argument.}"); shift ;;
     -v|--version) echo "Version ${SCRIPT_VERSION}"; exit ;;
+    --sc-*)       shellcheckArgs+=("${1#--sc}") ;;
     -)            endOfOptions=true ;;
     *)            error "Unknown option: ${1}" ; exit 1 ;;
   esac
   shift
 done
+[[ "${#shellcheckArgs[@]}" -gt 0 ]] || shellcheckArgs=("${DEFAULT_SHELLCHECK_ARGS[@]}")
+debug "Version ${SCRIPT_VERSION}"
+debug "Extra variables (${#extraVars[*]}): ${extraVars[*]}"
+debug "ShellCheck args (${#shellcheckArgs[*]}): ${shellcheckArgs[*]}"
 
 # Given a workflow JSON (converted from YAML), output the number of `runs` steps that don't specify their `shell`.
 function countRunsWithDefaultedShell {
@@ -214,7 +221,7 @@ function checkAction {
     info "Checking step: runs.steps[${stepId}]"
     debug 'Looking for step shell'
     stepShell=$(jq -r '.shell//empty' <<< "${step}")
-    [[ -n "${stepShell}" ]] || { error "Missing shell on step: ${stepId}"; exit 3; }
+    [[ -n "${stepShell}" ]] || { error "Missing shell on step: runs.steps[${stepId}]"; exit 5; }
     [[ "${stepShell}" =~ ^(ba)?sh$ ]] || { note "Skipping check with shell: ${stepShell}"; continue; }
     debug "Checking with shell: ${stepShell}"
     {
@@ -222,7 +229,7 @@ function checkAction {
       printf 'export %s=\n' "${defaultEnvVars[@]}"
       # shellcheck disable=SC2310 # Don't mind that errexit is inactive.
       getStepScript "${step}"
-    } | shellcheck --shell "${stepShell}" - >&2 ||
+    } | sed -Ee 's|\r||g' | shellcheck --shell "${stepShell}" "${shellcheckArgs[@]}" - >&2 ||
       failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
   done < <(jq -c '.runs.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${action}" || :)
 }
@@ -273,7 +280,7 @@ function checkWorkflow {
           jq -r '.env//{}|keys[]|"export "+.' <<< "${job}"
           # shellcheck disable=SC2310 # Don't mind that errexit is inactive.
           getStepScript "${step}"
-        } | shellcheck --shell "${shell}" - >&2 ||
+        } | sed -Ee 's|\r||g' | shellcheck --shell "${shell}" "${shellcheckArgs[@]}" - >&2 ||
           failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
       done
     done < <(jq -c '.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${job}" || :)
@@ -289,7 +296,7 @@ function checkFile {
     checkAction "${fileName}"
   else
     error "File is not a valid workflow, nor a valid composite action: ${fileName}"
-    exit 2
+    exit 4
   fi
 }
 
@@ -304,11 +311,11 @@ for path in "${@:-.}"; do
       : $((foundFilesCount++))
       checkFile "${fileName}"
     done < <(find "${path}" -maxdepth 1 -type f -name '*.yaml' -print0	|| :)
-    [[ "${foundFilesCount}" -gt 0 ]] || { error "Found no workflow files in: ${path}"; exit 1; }
+    [[ "${foundFilesCount}" -gt 0 ]] || { error "Found no workflow files in: ${path}"; exit 3; }
   elif [[ -e "${path}" ]]; then
     checkFile "${path}"
   else
-    error "Path does not exist: ${path}"
+    error "Path does not exist: ${path}"; exit 2
   fi
 done
 [[ "${#failures[0]}" -eq 0 ]] || printf 'Checks failed for: %s\n' "${failures[@]}" >&2
