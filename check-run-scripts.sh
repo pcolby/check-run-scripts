@@ -62,12 +62,11 @@ readonly -a defaultEnvVars=(
 
 function output {
   [[ "${OUTPUT_LEVEL:-4}" -ge "$1" ]] || return 0
-  [[ ! -t 2 ]] || echo -en "\x1b[$2m" >&2
+  [[ ! -v 'useColor' ]] || echo -en "\x1b[$2m" >&2
   printf '%(%F %T)T ' >&2
   printf '%s' "${@:3}" >&2
-  [[ ! -t 2 ]] || echo -en '\x1b[0m' >&2
+  [[ ! -v 'useColor' ]] || echo -en '\x1b[0m' >&2
   echo >&2
-  # \todo Check if this is GitHub, and output to step summary too.
 }
 
 function debug { output 5 37 "$*"; } # white
@@ -76,10 +75,14 @@ function note  { output 3 34 "Note: $*"; } # yellow
 function warn  { output 2 35 "Warning: $*"; } # magenta
 function error { output 1 31 "Error: $*"; } # red
 
+# \todo support foo= forms.
+# \todo allow arbitrary ordering.
+
 readonly USAGE_TEXT="
 Usage: ${BASH_SOURCE[0]} [<options>] [<path> [...]]
 
 Options:
+  -c,--color <when> Use color (auto, always, never). Defaults to auto.
   -d,--debug        Enable debug output.
   -h,--help         Show this help text and exit.
   -s,--set <names>  Set <names> in each extracted script, so ShellCheck treats
@@ -94,11 +97,12 @@ the following options are used by default:
   ${DEFAULT_SHELLCHECK_ARGS[*]}
 "
 
-declare -a extraVars=()
-declare -a shellcheckArgs=()
+declare -a extraVars=() shellcheckArgs=()
+declare useColor='auto'
 unset endOfOptions
 while [[ "${1:-}" == -* && ! -v endOfOptions ]]; do
   case "${1}" in
+    -c|--color)   useColor="${2:?The ${1} option requres an argument.}"; shift ;;
     -d|--debug)   OUTPUT_LEVEL=5 ;;
     -h|--help)    echo "${USAGE_TEXT}"; exit ;;
     -s|--set)     mapfile -td, -O "${#extraVars[@]}" extraVars < <(echo -n "${2:?The ${1} option requres an argument.}"); shift ;;
@@ -109,7 +113,13 @@ while [[ "${1:-}" == -* && ! -v endOfOptions ]]; do
   esac
   shift
 done
-[[ "${#shellcheckArgs[@]}" -gt 0 ]] || shellcheckArgs=("${DEFAULT_SHELLCHECK_ARGS[@]}")
+[[ "${#shellcheckArgs[@]}" -gt 0 ]] || shellcheckArgs=("--color=${useColor}" "${DEFAULT_SHELLCHECK_ARGS[@]}")
+case "${useColor}" in
+  auto)   [[ -t 2 ]] || unset useColor ;;
+  always) ;;
+  never)  unset useColor ;;
+  *)      error "Invalid color option: ${useColor}" ; exit 1 ;;
+esac
 debug "Version ${SCRIPT_VERSION}"
 debug "Extra variables (${#extraVars[*]}): ${extraVars[*]}"
 debug "ShellCheck args (${#shellcheckArgs[*]}): ${shellcheckArgs[*]}"
@@ -230,7 +240,7 @@ function checkAction {
       # shellcheck disable=SC2310 # Don't mind that errexit is inactive.
       getStepScript "${step}"
     } | sed -Ee 's|\r||g' | shellcheck --shell "${stepShell}" "${shellcheckArgs[@]}" - >&2 ||
-      failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
+      failures+=( "${fileName}::runs.steps[${stepId}]" )
   done < <(jq -c '.runs.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${action}" || :)
 }
 
@@ -319,4 +329,8 @@ for path in "${@:-.}"; do
   fi
 done
 [[ "${#failures[0]}" -eq 0 ]] || printf 'Checks failed for: %s\n' "${failures[@]}" >&2
+[[ "${#failures[0]}" -eq 0 || ! -v 'GITHUB_STEP_SUMMARY' ]] || {
+  tee -a "${GITHUB_STEP_SUMMARY}" <<< '### Failed Checks'
+  printf '\n:x: `%s`\n' "${failures[@]}" | tee -a "${GITHUB_STEP_SUMMARY}"
+}
 [[ "${#failures[0]}" -eq 0 ]]

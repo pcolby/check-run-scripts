@@ -54,21 +54,21 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install shellcheck yq
       - name: Check defaults
-        uses: pcolby/check-run-scripts@action
+        uses: ./
       - name: Check specific paths
-        uses: pcolby/check-run-scripts@action
+        uses: ./
         with:
           paths: |-
             .github/workflows
             action.yaml
       - name: Check trailing newline # ie if someone forgets the `-` in `|-`.
-        uses: pcolby/check-run-scripts@action
+        uses: ./
         with:
           paths: | # No chomp indicator.
             .github/workflows
             action.yaml
       - name: Check overriding most options # Not actually testing their effects.
-        uses: pcolby/check-run-scripts@action
+        uses: ./
         with:
           paths: |-
             .github/workflows
