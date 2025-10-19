@@ -51,6 +51,7 @@ You can use the `--help` option for more details.
 Usage: ./check-run-scripts.sh [<options>] [<path> [...]]
 
 Options:
+  -c,--color <when> Use color (auto, always, never). Defaults to auto.
   -d,--debug        Enable debug output.
   -h,--help         Show this help text and exit.
   -s,--set <names>  Set <names> in each extracted script, so ShellCheck treats
