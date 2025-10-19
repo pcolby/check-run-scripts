@@ -217,7 +217,7 @@ function getStepScript {
   jq -r '.env//{}|keys[]|"export "+.' <<< "${step}"
   echo '# Extra variables'
   [[ "${#extraVars[@]}" -eq 0 ]] || printf 'export %s=\n' "${extraVars[@]}"
-  # shellcheck disable=SC2016 # The GitHub Actions expression is not meant to me expanded.
+  # shellcheck disable=SC2016 # The follow `${{ .. }}` is a GitHub Actions expression, not a Bash expansion.
   echo '# Shell script (with ${{ ... }} expressions removed)'
   jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
 }
@@ -237,7 +237,7 @@ function checkAction {
     {
       echo '# GitHub environment variables'
       printf 'export %s=\n' "${defaultEnvVars[@]}"
-      # shellcheck disable=SC2310 # Don't mind that errexit is inactive.
+      # shellcheck disable=SC2310 # Don't mind that errexit is inactive on the following line.
       getStepScript "${step}"
     } | sed -Ee 's|\r||g' | shellcheck --shell "${stepShell}" "${shellcheckArgs[@]}" - >&2 ||
       failures+=( "${fileName}::runs.steps[${stepId}]" )
@@ -288,7 +288,7 @@ function checkWorkflow {
           jq -r '.env//{}|keys[]|"export "+.' <<< "${workflow}"
           echo '# Job environment variables'
           jq -r '.env//{}|keys[]|"export "+.' <<< "${job}"
-          # shellcheck disable=SC2310 # Don't mind that errexit is inactive.
+          # shellcheck disable=SC2310 # Don't mind that errexit is inactive on the following line.
           getStepScript "${step}"
         } | sed -Ee 's|\r||g' | shellcheck --shell "${shell}" "${shellcheckArgs[@]}" - >&2 ||
           failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
@@ -331,6 +331,7 @@ done
 [[ "${#failures[0]}" -eq 0 ]] || printf 'Checks failed for: %s\n' "${failures[@]}" >&2
 [[ "${#failures[0]}" -eq 0 || ! -v 'GITHUB_STEP_SUMMARY' ]] || {
   tee -a "${GITHUB_STEP_SUMMARY}" <<< '### Failed Checks'
+  # shellcheck disable=SC2016 # The following backticks are for Markdown output, not Bash expansion.
   printf '\n:x: `%s`\n' "${failures[@]}" | tee -a "${GITHUB_STEP_SUMMARY}"
 }
 [[ "${#failures[0]}" -eq 0 ]]
