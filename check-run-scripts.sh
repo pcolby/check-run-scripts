@@ -323,7 +323,7 @@ for path in "${pathsToCheck[@]}"; do
     while IFS= read -d '' -r fileName; do
       : $((foundFilesCount++))
       checkFile "${fileName}"
-    done < <(find "${path}" -maxdepth 1 -type f -name '*.yaml' -print0	|| :)
+    done < <(find "${path}" -maxdepth 1 \( -name '*.yaml' -or -name '*.yml' \) -type f -print0 || :)
     [[ "${foundFilesCount}" -gt 0 ]] || { error "Found no workflow files in: ${path}"; exit 3; }
   elif [[ -e "${path}" ]]; then
     checkFile "${path}"

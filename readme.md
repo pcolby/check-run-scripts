@@ -41,8 +41,8 @@ chmod u+x check-run-scripts.sh
 
 Once installed, run either:
 
-1. in a folder containing workflow `*.yaml` files; or
-2. in a project's root folder, with a `.github/workflows/` folder containing `*.yaml` files; or
+1. in a project's root folder, with a `.github/workflows/` folder containing `*.yaml` or `*.yml` files; or
+1. in a folder containing workflow `*.yaml` or `*.yml` files; or
 3. with positional arguments listing one or more files or directories to search.
 
 You can use the `--help` option for more details.
