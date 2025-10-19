@@ -79,7 +79,7 @@ runs:
         [[ -z "${INPUT_SEVERITY}" ]] || args+=("--sc--severity=${INPUT_SEVERITY}")
         [[ "${INPUT_DEBUG}" != 'true' ]] || args+=('--debug')
         [[ -z "${INPUT_SHELL}" ]] || args+=("--sc--shell=${INPUT_SHELL}")
-        mapfile -O "${#args[@]}" -t args <<< "${INPUT_PATHS%$'\n'}"
+        [[ -z "${INPUT_PATHS}" ]] || mapfile -O "${#args[@]}" -t args <<< "${INPUT_PATHS%$'\n'}"
         [[ "${INPUT_DEBUG}" != 'true' ]] || printf 'Arg: %s\n' "${args[@]}"
         "${GITHUB_ACTION_PATH}/check-run-scripts.sh" "${args[@]}"
       shell: bash

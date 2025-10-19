@@ -55,18 +55,22 @@ jobs:
         run: choco install shellcheck yq
       - name: Check defaults
         uses: ./
+        with:
+          debug: true
       - name: Check specific paths
         uses: ./
         with:
           paths: |-
             .github/workflows
             action.yaml
+          debug: true
       - name: Check trailing newline # ie if someone forgets the `-` in `|-`.
         uses: ./
         with:
           paths: | # No chomp indicator.
             .github/workflows
             action.yaml
+          debug: true
       - name: Check overriding most options # Not actually testing their effects.
         uses: ./
         with:

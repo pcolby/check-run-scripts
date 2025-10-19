@@ -75,17 +75,14 @@ function note  { output 3 34 "Note: $*"; } # yellow
 function warn  { output 2 35 "Warning: $*"; } # magenta
 function error { output 1 31 "Error: $*"; } # red
 
-# \todo support foo= forms.
-# \todo allow arbitrary ordering.
-
 readonly USAGE_TEXT="
 Usage: ${BASH_SOURCE[0]} [<options>] [<path> [...]]
 
 Options:
-  -c,--color <when> Use color (auto, always, never). Defaults to auto.
+  -c,--color=<when> Use color (auto, always, never). Defaults to auto.
   -d,--debug        Enable debug output.
   -h,--help         Show this help text and exit.
-  -s,--set <names>  Set <names> in each extracted script, so ShellCheck treats
+  -s,--set=<names>  Set <names> in each extracted script, so ShellCheck treats
                     them as assigned.
   -v,--version      Show the script's version, and exit.
   -                 Treat the remaining arguments as positional.
@@ -97,22 +94,27 @@ the following options are used by default:
   ${DEFAULT_SHELLCHECK_ARGS[*]}
 "
 
-declare -a extraVars=() shellcheckArgs=()
+declare -a extraVars=() pathsToCheck=() shellcheckArgs=()
 declare useColor='auto'
 unset endOfOptions
-while [[ "${1:-}" == -* && ! -v endOfOptions ]]; do
+while [[ "$#" -gt 0 && ! -v endOfOptions ]]; do
   case "${1}" in
     -c|--color)   useColor="${2:?The ${1} option requres an argument.}"; shift ;;
+    --color=*)    useColor="${1#--color=}" ;;
     -d|--debug)   OUTPUT_LEVEL=5 ;;
     -h|--help)    echo "${USAGE_TEXT}"; exit ;;
     -s|--set)     mapfile -td, -O "${#extraVars[@]}" extraVars < <(echo -n "${2:?The ${1} option requres an argument.}"); shift ;;
+    --set=*)      mapfile -td, -O "${#extraVars[@]}" extraVars < <(echo -n "${1#--set=}") ;;
     -v|--version) echo "Version ${SCRIPT_VERSION}"; exit ;;
     --sc-*)       shellcheckArgs+=("${1#--sc}") ;;
-    -)            endOfOptions=true ;;
-    *)            error "Unknown option: ${1}" ; exit 1 ;;
+    --)           endOfOptions=true ;;
+    -*)           error "Unknown option: ${1}" ; exit 1 ;;
+    *)            pathsToCheck+=("${1}") ;;
   esac
   shift
 done
+pathsToCheck+=("${@}") # Add any remaining positional arguments.
+[[ "${#pathsToCheck[@]}" -gt 0 ]] || pathsToCheck=("${PWD}")
 [[ "${#shellcheckArgs[@]}" -gt 0 ]] || shellcheckArgs=("--color=${useColor}" "${DEFAULT_SHELLCHECK_ARGS[@]}")
 case "${useColor}" in
   auto)   [[ -t 2 ]] || unset useColor ;;
@@ -122,6 +124,7 @@ case "${useColor}" in
 esac
 debug "Version ${SCRIPT_VERSION}"
 debug "Extra variables (${#extraVars[*]}): ${extraVars[*]}"
+debug "Paths to check (${#pathsToCheck[*]}): ${pathsToCheck[*]}"
 debug "ShellCheck args (${#shellcheckArgs[*]}): ${shellcheckArgs[*]}"
 
 # Given a workflow JSON (converted from YAML), output the number of `runs` steps that don't specify their `shell`.
@@ -312,7 +315,7 @@ function checkFile {
 
 [[ ! -v UNIT_TESTING_ONLY ]] || return 0
 declare -a failures=()
-for path in "${@:-.}"; do
+for path in "${pathsToCheck[@]}"; do
   if [[ -d "${path}" ]]; then
     [[ ! -d "${path%/}/.github/workflows" ]] || path="${path%/}/.github/workflows"
     info "Checking directory: ${path}"
