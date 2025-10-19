@@ -166,7 +166,7 @@ For GitHub's macOS runners, `bash` must be upgraded (macOS's Bash is ancient), a
 
 ### Windows
 
-For GitHub's Windows runners, both `jq` and `yq` must be installed.
+For GitHub's Windows runners, both `shellcheck` and `yq` must be installed.
 
 ```yaml
 - run: choco install shellcheck yq
