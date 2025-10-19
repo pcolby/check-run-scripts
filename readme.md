@@ -1,4 +1,4 @@
-# Check 'Run' Scripts
+# Check `run` Scripts
 
 [![Test](https://github.com/pcolby/check-run-scripts/actions/workflows/test.yaml/badge.svg)](
 https://github.com/pcolby/check-run-scripts/actions/workflows/test.yaml)
