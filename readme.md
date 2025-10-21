@@ -32,7 +32,7 @@ The script depends on [Bash], [jq] and [yq], so install those first, if you don'
 To install, simply download the `check-run-scripts.sh` script to somewhere you like, and make it executable.
 
 ```sh
-curl -O 'https://raw.githubusercontent.com/pcolby/check-run-scripts/v0.1/check-run-scripts.sh'
+curl -O 'https://raw.githubusercontent.com/pcolby/check-run-scripts/v0.2/check-run-scripts.sh'
 chmod u+x check-run-scripts.sh
 ./check-run-scripts.sh --version
 ```
@@ -99,7 +99,7 @@ $
 ### Action Usage
 
 ```yaml
-- uses: pcolby/check-run-scripts@v0.1
+- uses: pcolby/check-run-scripts@v0.2
   with:
     # Files or directories containing workflow/action files to check. If not specified, files under the
     # `./.github/workflows` folder will be checked, otherwise files in the current working directory itself.
@@ -165,7 +165,7 @@ For GitHub's macOS runners, `bash` must be upgraded (macOS's Bash is ancient), a
 
 ```yaml
 - run: brew install bash shellcheck
-- uses: pcolby/check-run-scripts@v0.1
+- uses: pcolby/check-run-scripts@v0.2
 ```
 
 ### Windows
@@ -174,7 +174,7 @@ For GitHub's Windows runners, both `shellcheck` and `yq` must be installed.
 
 ```yaml
 - run: choco install shellcheck yq
-- uses: pcolby/check-run-scripts@v0.1
+- uses: pcolby/check-run-scripts@v0.2
 ```
 
 [Bash]: https://www.gnu.org/software/bash/
