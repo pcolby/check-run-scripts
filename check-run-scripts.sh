@@ -208,7 +208,7 @@ function getJobShells {
 
     # Otherwise, determine the shell/s from the job's operating system/s (could be more than one, if using a matrix).
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
-    local -Ar defaultOsShell=([macos]=bash [ubuntu]=bash [windows]=pwsh)
+    local -Ar defaultOsShell=([macos]='bash-defaulted' [ubuntu]='bash-defaulted' [windows]=pwsh)
     for os in $(getJobOs "${jobId}" "${job}"); do
       echo "${defaultOsShell[${os}]}"
     done | jq -rRs 'split("\n")|unique|join(" ")|ltrimstr(" ")'
@@ -238,6 +238,8 @@ function checkAction {
     [[ "${stepShell}" =~ ^(ba)?sh$ ]] || { note "Skipping check with shell: ${stepShell}"; continue; }
     debug "Checking with shell: ${stepShell}"
     {
+      echo '# Options GitHub always sets on Actions'
+      echo 'set -e -o pipefail'
       echo '# GitHub environment variables'
       printf 'export %s=\n' "${defaultEnvVars[@]}"
       # shellcheck disable=SC2310 # Don't mind that errexit is inactive on the following line.
@@ -282,9 +284,12 @@ function checkWorkflow {
       stepShell=$(jq -r '.shell//empty' <<< "${step}")
       debug "Step shell: ${stepShell:-<none> - will use job"'"s default/s}"
       for shell in ${stepShell:-${jobShells}}; do
-        [[ "${shell}" =~ ^(ba)?sh$ ]] || { note "Skipping check with shell: ${shell}"; continue; }
+        [[ "${shell}" =~ ^(ba)?sh(-defaulted)?$ ]] || { note "Skipping check with shell: ${shell}"; continue; }
         debug "Checking with shell: ${shell}"
         {
+          echo "# Options GitHub sets for shell: ${shell}"
+          # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
+          sed -e 's|^defaulted$|set -e|' -e 's|^bash$|set -e -o pipefail|' <<< "${shell#bash-}"
           echo '# GitHub environment variables'
           printf 'export %s=\n' "${defaultEnvVars[@]}"
           echo '# Workflow environment variables'
@@ -293,7 +298,7 @@ function checkWorkflow {
           jq -r '.env//{}|keys[]|"export "+.' <<< "${job}"
           # shellcheck disable=SC2310 # Don't mind that errexit is inactive on the following line.
           getStepScript "${step}"
-        } | sed -Ee 's|\r||g' | shellcheck --shell "${shell}" "${shellcheckArgs[@]}" - >&2 ||
+        } | sed -Ee 's|\r||g' | shellcheck --shell "${shell%-defaulted}" "${shellcheckArgs[@]}" - >&2 ||
           failures+=( "${fileName}::jobs.${jobId}.steps[${stepId}]" )
       done
     done < <(jq -c '.steps//{}|to_entries[]|select(.value.run)|{_id:.key}+.value' <<< "${job}" || :)

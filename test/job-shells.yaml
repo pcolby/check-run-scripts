@@ -24,7 +24,7 @@ args:
   - jobId
   - runs-on: macos
   - ""
-expected: bash
+expected: bash-defaulted
 ---
 name: Fallback to default Ubuntu shell
 function: getJobShells
@@ -32,7 +32,7 @@ args:
   - jobId
   - runs-on: ubuntu
   - ""
-expected: bash
+expected: bash-defaulted
 ---
 name: Fallback to default Windows shell
 function: getJobShells
@@ -54,5 +54,5 @@ args:
           - ubuntu-2
           - macos-3
   - ""
-expected: bash pwsh
+expected: bash-defaulted pwsh
 ...
