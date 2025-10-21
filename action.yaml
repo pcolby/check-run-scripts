@@ -33,8 +33,14 @@ inputs:
       source.
     default: true
 
+  external-variables:
+    description: >-
+      Comma-separated list of variables to assume are defined elsewhere. Useful, for example, if earlier steps create
+      environment variables by writing to `${GITHUB_ENV}`.
+    required: false
+
   rc-file:
-    description: Configuration file to prefer over searching for one in the default locations.
+    description: ShellCheck configuration file to prefer over searching for one in the default locations.
     required: false
 
   source-path:
@@ -71,6 +77,7 @@ runs:
         [[ -z "${INPUT_INCLUDE}" ]] || args+=("--sc--enable=${INPUT_INCLUDE}")
         [[ -z "${INPUT_EXCLUDE}" ]] || args+=("--sc--exclude=${INPUT_EXCLUDE}")
         [[ "${INPUT_EXTERNAL_SOURCES}" != 'true' ]] || args+=('--sc--check-sourced')
+        [[ -z "${INPUT_EXTERNAL_VARIABLES}" ]] || args+=("--set=${INPUT_EXTERNAL_VARIABLES}")
         [[ -z "${INPUT_RC_FILE}" ]] || args+=("--sc--rcfile=${INPUT_RC_FILE}")
         [[ -z "${INPUT_SOURCE_PATH}" ]] || {
           mapfile -t paths <<< "${INPUT_SOURCE_PATH%$'\n'}"
@@ -89,6 +96,7 @@ runs:
         INPUT_INCLUDE: ${{ inputs.include }}
         INPUT_EXCLUDE: ${{ inputs.exclude }}
         INPUT_EXTERNAL_SOURCES: ${{ inputs.external-sources }}
+        INPUT_EXTERNAL_VARIABLES: ${{ inputs.external-variables }}
         INPUT_RC_FILE: ${{ inputs.rc-file }}
         INPUT_SOURCE_PATH: ${{ inputs.source-path }}
         INPUT_SEVERITY: ${{ inputs.severity }}

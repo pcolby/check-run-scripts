@@ -126,6 +126,10 @@ $
     # Optional. Default is `true`.
     external-sources: true
 
+    # Comma-separated list of variables to assume are defined elsewhere. Useful, for example, if earlier steps create
+    # environment variables by writing to `${GITHUB_ENV}`.
+    external-variables: SOME_ENV_VAR,SOME_OTHER_VAR
+
     # Configuration file to prefer over searching for one in the default locations.
     # Optional. Default is '' (none).
     rc-file: some/preferred/shellcheck.rc
