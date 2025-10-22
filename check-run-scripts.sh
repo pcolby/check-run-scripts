@@ -235,7 +235,7 @@ function checkAction {
     debug 'Looking for step shell'
     stepShell=$(jq -r '.shell//empty' <<< "${step}")
     [[ -n "${stepShell}" ]] || { error "Missing shell on step: runs.steps[${stepId}]"; exit 5; }
-    [[ "${stepShell}" =~ ^(ba)?sh$ ]] || { note "Skipping check with shell: ${stepShell}"; continue; }
+    [[ "${stepShell}" =~ ^(ba)?sh$ ]] || { note "Skipping step with shell: ${stepShell}"; continue; }
     debug "Checking with shell: ${stepShell}"
     {
       echo '# Options GitHub always sets on Actions'
