@@ -37,11 +37,13 @@ function runTest {
 function runTests {
   local -r fileName="${1}"
   debug "Running test: ${fileName}"
+  local tests
+  tests="$(yq -I0 -oj "${fileName}" | jq -cs 'to_entries[]|{index:.key}+.value')"
   while IFS= read -r test; do
     testIndex=$(jq -r .index <<< "${test}")
     debug "Running test: ${fileName}[${testIndex}]"
     runTest "${test}" "${fileName}" "${testIndex}"
-  done < <(yq -I0 -oj "${fileName}" | jq -cs 'to_entries[]|{index:.key}+.value' || :)
+  done <<< "${tests}"
 }
 
 declare -a failures=()

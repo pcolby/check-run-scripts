@@ -127,13 +127,15 @@ debug "Extra variables (${#extraVars[*]}): ${extraVars[*]}"
 debug "Paths to check (${#pathsToCheck[*]}): ${pathsToCheck[*]}"
 debug "ShellCheck args (${#shellcheckArgs[*]}): ${shellcheckArgs[*]}"
 
-# Given a workflow JSON (converted from YAML), output the number of `runs` steps that don't specify their `shell`.
-function countRunsWithDefaultedShell {
-  debug 'Counting steps that run scripts without specifying the shell to use'
-  local count
-  count=$(jq -r '[.jobs[]?.steps?[]?|select(has("run") and (has("shell")|not))]|length')
-  debug "Found ${count} step/s with defaulted shells"
-  echo "${count}"
+# Look for an any `jobs` with at least one `runs` step that doesn't specify the `shell` (ie it 'defaults'), and output
+# a JSON array of IDs for those jobs (or an empty array if there are none). Note, we use a JSON array here as an easy
+# and safe serialisation format that can handle job IDs with special characters.
+function getJobsWithDefaultedRunsShells {
+  debug 'Looking for jobs containing run scripts with no explicit shell'
+  local jobIds
+  jobIds=$(jq -c '[.jobs//empty|to_entries[]|select([.value.steps[]?|select(has("run") and (has("shell")|not))]|length > 0).key]')
+  debug "Jobs without explicit shells: ${jobIds}"
+  echo "${jobIds}"
 }
 
 # Detect the operating systems used by the given job. If successful, the result will be a string containg one or more
@@ -254,26 +256,36 @@ function checkWorkflow {
   workflow=$(yq -oj "${fileName}") # Convert to JSON.
 
   # See if we need to determine the default shell for the OS.
-  local count needDefaultShells workflowShell=''
-  count=$(countRunsWithDefaultedShell <<< "${workflow}")
-  unset needDefaultShells
-  [[ "${count}" -eq 0 ]] || {
-    needDefaultShells=true
+  local jobsWithDefaultedShells
+  jobsWithDefaultedShells="$(getJobsWithDefaultedRunsShells <<< "${workflow}")"
+  local workflowShell=''
+  [[ "${jobsWithDefaultedShells}" == '[]' ]] || {
     debug 'Looking for workflow shell'
     workflowShell=$(jq -r '.defaults.run.shell//empty' <<< "${workflow}")
     debug "Workflow default shell: ${workflowShell:-<none>}"
   }
-  unset count
 
   # Process each job in the workflow.
   while IFS= read -r job; do
     local jobId
     jobId=$(jq -r '.id//._id' <<< "${job}")
     info "Checking job: ${jobId}"
+
+    # See if need to determine this job's default shell/s, and if so, fetch them. Note, we could simply fetch the job's
+    # shell/s for every job (we simply won't use the information later if we don't need it), but if getJobShells has to
+    # fall back to inspecting matrix values, it can get a little expensive, and possibly more brittle, so we include
+    # extra checks now to avoid calling getJobShells unnecessarily.
     unset jobShells
-    [[ ! -v needDefaultShells ]] || {
-      jobShells=$(getJobShells "${jobId}" "${job}" "${workflowShell}")
-      debug "Job shell/s: ${jobShells}"
+    [[ "${jobsWithDefaultedShells}" == '[]' ]] || {
+      debug 'Checking if this job contains run scripts with no explicit shell'
+      local isInList
+      isInList="$(jq --arg jobId "${jobId}" 'index($jobId)//empty' <<< "${jobsWithDefaultedShells}")"
+      debug "This job's position in jobs-with-defaulted-shells list: ${isInList:-<none>}"
+      [[ -z "${isInList}" ]] || {
+        jobShells=$(getJobShells "${jobId}" "${job}" "${workflowShell}")
+        debug "Job shell/s: ${jobShells}"
+      }
+      unset isInList
     }
 
     while IFS= read -r step; do

@@ -1,26 +1,26 @@
 ---
 name: No steps # eg if all workflows are calling reusable workflows.
-function: countRunsWithDefaultedShell
+function: getJobsWithDefaultedRunsShells
 input:
   jobs:
     job1:
       uses: foo
     job2:
       uses: bar
-expected: 0
+expected: '[]'
 ---
 name: No run steps
-function: countRunsWithDefaultedShell
+function: getJobsWithDefaultedRunsShells
 input:
   jobs:
     job1:
       steps: [ ]
     job2:
       steps: [ ]
-expected: 0
+expected: '[]'
 ---
 name: One step without shell
-function: countRunsWithDefaultedShell
+function: getJobsWithDefaultedRunsShells
 input:
   jobs:
     job1:
@@ -38,10 +38,10 @@ input:
         - run: E w/ no shell
         - run: F
           shell: bash
-expected: 1
+expected: '["job2"]'
 ---
 name: All steps without shell
-function: countRunsWithDefaultedShell
+function: getJobsWithDefaultedRunsShells
 input:
   jobs:
     job1:
@@ -54,10 +54,16 @@ input:
         - run: A
         - run: B
         - run: C
-expected: 6
+    "job with\n\tcomplex id":
+      steps:
+        - run: A
+    1:
+      steps:
+        - run: A
+expected: '["job1","job2","job with\n\tcomplex id","1"]'
 ---
 name: Ignore non-run steps
-function: countRunsWithDefaultedShell
+function: getJobsWithDefaultedRunsShells
 input:
   jobs:
     job1:
@@ -74,5 +80,5 @@ input:
         - run: E
           shell: bash
         - use: F
-expected: 0
+expected: '[]'
 ...
