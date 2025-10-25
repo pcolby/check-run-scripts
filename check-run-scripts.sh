@@ -224,7 +224,7 @@ function getStepScript {
   [[ "${#extraVars[@]}" -eq 0 ]] || printf 'export %s=\n' "${extraVars[@]}"
   # shellcheck disable=SC2016 # The follow `${{ .. }}` is a GitHub Actions expression, not a Bash expansion.
   echo '# Shell script (with ${{ ... }} expressions removed)'
-  jq -r '.run' <<< "${step}" | sed -e 's|\${{[^}]\+}}||g'
+  jq -r '.run' <<< "${step}" | sed -Ee 's|\$\{\{[^}]+\}\}||g'
 }
 
 function checkAction {
@@ -301,7 +301,7 @@ function checkWorkflow {
         {
           echo "# Options GitHub sets for shell: ${shell}"
           # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell
-          sed -e 's|^defaulted$|set -e|' -e 's|^bash$|set -e -o pipefail|' <<< "${shell#bash-}"
+          sed -Ee 's|^defaulted$|set -e|' -e 's|^bash$|set -e -o pipefail|' <<< "${shell#bash-}"
           echo '# GitHub environment variables'
           printf 'export %s=\n' "${defaultEnvVars[@]}"
           echo '# Workflow environment variables'

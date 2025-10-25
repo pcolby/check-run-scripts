@@ -28,9 +28,9 @@ jobs:
         run: ./check-run-scripts.sh --debug action.yaml
       - name: Check workflows
         run: ./check-run-scripts.sh --debug
-    strategy: &strategy
+    strategy:
       matrix:
-        os:
+        os: &matrix-os
           - macos-14
           - macos-15
           - macos-26
@@ -89,4 +89,48 @@ jobs:
           shell: bash
           severity: info
           debug: true
-    strategy: *strategy
+    strategy:
+      matrix:
+        os: *matrix-os
+      fail-fast: false
+
+  test-external:
+    runs-on: ${{ matrix.os }}
+    env:
+      MATRIX_REPO: ${{ matrix.repo }}
+      MATRIX_VARS: ${{ matrix.vars }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: self
+      - uses: actions/checkout@v5
+        with:
+          repository: ${{ matrix.repo }}
+          path: ${{ matrix.repo }}
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOs'
+        run: brew install bash shellcheck
+      - name: Install dependencies (win)
+        if: runner.os == 'Windows'
+        run: choco install shellcheck yq
+      - name: Check workflows
+        run: ./self/check-run-scripts.sh --debug ${MATRIX_VARS:+--set="${MATRIX_VARS}"}  "${MATRIX_REPO}"
+      - name: Check action
+        run: |
+          [[ ! -e "${MATRIX_REPO}/action.yaml" ]] ||
+            ./self/check-run-scripts.sh --debug ${MATRIX_VARS:+--set="${MATRIX_VARS}"} "${MATRIX_REPO}/action.yaml"
+    strategy:
+      matrix:
+        os: *matrix-os
+        repo: # Just some public repos that depend on this project.
+          - pcolby/check-run-scripts
+          - pcolby/connectiq-sdk-manager
+          - pcolby/dokit
+          - pcolby/install-linuxdeploy
+          - pcolby/nfc-quick-settings
+          - pcolby/tap-summary
+        include:
+          - { repo: pcolby/dokit, vars: 'QT_ROOT_DIR,RUNNER_WORKSPACE' }
+          - { repo: pcolby/install-linuxdeploy, vars: INSTALL_DIR }
+          - { repo: pcolby/tap-summary, vars: EXTRA_DIFF_ARGS }
+      fail-fast: false
