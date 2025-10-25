@@ -4,7 +4,7 @@
 
 Fixed a bug where, on macOS only, the `${{ ... }}` expression were not being stripped from embedded scripts ([09d65fa]).
 
-Also delayed processing matrix variables (for OS detectio) untill, and unless, strictly needed for each job ([c0ce39a]).
+Also delayed processing matrix variables (for OS detection) until, and unless, strictly needed for each job ([c0ce39a]).
 
 ## [0.2.0] (2025-10-21)
 
