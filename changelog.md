@@ -22,6 +22,7 @@ Exposed the script's `--set` option via a new `external-variables` action input 
 
 Initial release.
 
+[1.0.0]: https://github.com/pcolby/check-run-scripts/releases/tag/v1.0.0
 [0.3.0]: https://github.com/pcolby/check-run-scripts/releases/tag/v0.3.0
 [0.2.0]: https://github.com/pcolby/check-run-scripts/releases/tag/v0.2.0
 [0.1.1]: https://github.com/pcolby/check-run-scripts/releases/tag/v0.1.1
