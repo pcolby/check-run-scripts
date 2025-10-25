@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.0] (2025-10-25)
+
+First stable release.
+
 ## [0.3.0] (2025-10-25)
 
 Fixed a bug where, on macOS only, the `${{ ... }}` expression were not being stripped from embedded scripts ([09d65fa]).
