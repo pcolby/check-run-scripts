@@ -117,7 +117,7 @@ pathsToCheck+=("${@}") # Add any remaining positional arguments.
 [[ "${#pathsToCheck[@]}" -gt 0 ]] || pathsToCheck=("${PWD}")
 [[ "${#shellcheckArgs[@]}" -gt 0 ]] || shellcheckArgs=("--color=${useColor}" "${DEFAULT_SHELLCHECK_ARGS[@]}")
 case "${useColor}" in
-  auto)   [[ -t 2 ]] || unset useColor ;;
+  auto)   [[ -t 2 || "${GITHUB_ACTIONS-}" == 'true' ]] || unset useColor ;;
   always) ;;
   never)  unset useColor ;;
   *)      error "Invalid color option: ${useColor}" ; exit 1 ;;
