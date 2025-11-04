@@ -7,7 +7,7 @@
 set -o errexit -o noclobber -o nounset -o pipefail -r
 shopt -s inherit_errexit
 
-readonly SCRIPT_VERSION=1.0.1-pre
+readonly SCRIPT_VERSION=1.0.1
 
 readonly -a DEFAULT_SHELLCHECK_ARGS=('--check-sourced' '--enable=all' '--external-sources' '--norc')
 
