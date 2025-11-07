@@ -330,18 +330,44 @@ function checkFile {
   fi
 }
 
+function findAndCheckFiles {
+  local -r type="${1}"
+  local -r label="${2}"
+  local -r yqTest="${3}"
+  shift 3
+  info "Looking for ${label}s in: ${path}"
+  debug "Find args: ${*} -type f"
+  while IFS= read -d '' -r fileName; do
+    [[ "$(yq "${yqTest}" "${fileName}" || :)" == 'true' ]] || {
+      note "Skipping non-${label} file: ${fileName}"
+      continue
+    }
+    : $((foundFilesCount++))
+    "check${type@u}" "${fileName}"
+  done < <(find "${@}" -type f -print0 || :)
+}
+
+function findAndCheckActions {
+  local -r path="${1}"
+  findAndCheckFiles action 'composite action' '.runs.using == "composite"' \
+    "${path}" \( -name 'action.yaml' -or -name 'action.yml' \)
+}
+
+function findAndCheckWorkflows {
+  local path="${1}"
+  [[ ! -d "${path%/}/.github/workflows" ]] || path="${path%/}/.github/workflows"
+  findAndCheckFiles workflow 'workflow' '.jobs|length > 0' \
+    "${path}" -maxdepth 1 \( -name '*.yaml' -or -name '*.yml' \)
+}
+
 [[ ! -v UNIT_TESTING_ONLY ]] || return 0
 declare -a failures=()
 for path in "${pathsToCheck[@]}"; do
   if [[ -d "${path}" ]]; then
-    [[ ! -d "${path%/}/.github/workflows" ]] || path="${path%/}/.github/workflows"
-    info "Checking directory: ${path}"
     foundFilesCount=0
-    while IFS= read -d '' -r fileName; do
-      : $((foundFilesCount++))
-      checkFile "${fileName}"
-    done < <(find "${path}" -maxdepth 1 \( -name '*.yaml' -or -name '*.yml' \) -type f -print0 || :)
-    [[ "${foundFilesCount}" -gt 0 ]] || { error "Found no workflow files in: ${path}"; exit 3; }
+    findAndCheckActions "${path}"
+    findAndCheckWorkflows "${path}"
+    [[ "${foundFilesCount}" -gt 0 ]] || { error "Found no action or workflow files in: ${path}"; exit 3; }
   elif [[ -e "${path}" ]]; then
     checkFile "${path}"
   else
