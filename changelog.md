@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.0] (2025-11-07)
+
+Separated the search for composite actions and workflow files, so that finding a `.github/workflows` directory does not
+prevent also finding composite actions ([e85afef]).
+
 ## [1.0.1] (2025-11-04)
 
 Extended the `--color=auto` option to also auto-enable color when running on GitHub Actions ([7c41f1a]).
@@ -26,6 +31,7 @@ Exposed the script's `--set` option via a new `external-variables` action input 
 
 Initial release.
 
+[1.1.0]: https://github.com/pcolby/check-run-scripts/releases/tag/v1.1.0
 [1.0.1]: https://github.com/pcolby/check-run-scripts/releases/tag/v1.0.1
 [1.0.0]: https://github.com/pcolby/check-run-scripts/releases/tag/v1.0.0
 [0.3.0]: https://github.com/pcolby/check-run-scripts/releases/tag/v0.3.0
@@ -38,3 +44,4 @@ Initial release.
 [6ecd126]: https://github.com/pcolby/check-run-scripts/commit/6ecd1266ae6a38d718eeee7cb7e94e38e8d5f46f
 [7c41f1a]: https://github.com/pcolby/check-run-scripts/commit/7c41f1a70e4383248ec8f445bffbc1b5494a227d
 [c0ce39a]: https://github.com/pcolby/check-run-scripts/commit/c0ce39a513fddf9f49795a7d16660987b4f07b15
+[e85afef]: https://github.com/pcolby/check-run-scripts/commit/e85afefd77140bd66b51524e0d39dcc46ee00663
