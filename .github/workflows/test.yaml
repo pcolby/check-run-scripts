@@ -15,7 +15,7 @@ jobs:
   test-local:
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install dependencies (macOS)
         if: runner.os == 'macOs'
         run: brew install bash shellcheck
@@ -46,7 +46,7 @@ jobs:
   test-action:
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install dependencies (macOS)
         if: runner.os == 'macOs'
         run: brew install bash shellcheck
@@ -100,10 +100,10 @@ jobs:
       MATRIX_REPO: ${{ matrix.repo }}
       MATRIX_VARS: ${{ matrix.vars }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           path: self
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
           path: ${{ matrix.repo }}

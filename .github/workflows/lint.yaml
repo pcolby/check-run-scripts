@@ -11,7 +11,7 @@ jobs:
     name: Lint checks
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Check gawk files
         run: gawk --lint=no-ext -f misc/default-environment-variables.gawk --sandbox /dev/null
       - name: Check Markdown files
