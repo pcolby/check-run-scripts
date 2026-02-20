@@ -28,7 +28,7 @@ jobs:
   release:
     name: Tag and draft release
     if: github.actor == 'pcolby'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     steps:
       - name: Determine new version
         run: |
